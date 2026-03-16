@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CC Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="window">
+  <div class="titlebar">
+    <div class="tb-dots">
+      <div class="tb-dot r" id="btnClose"></div>
+      <div class="tb-dot y" id="btnMinimize"></div>
+      <div class="tb-dot g" id="btnMaximize"></div>
+    </div>
+    <div class="tb-title">CC Companion</div>
+    <div class="tb-logo">⚔️</div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status idle" id="status">
+    <div class="st-dot"></div>
+    <div class="st-info">
+      <div class="st-msg" id="stMsg">No Claude instances detected</div>
+      <div class="st-sub" id="stSub">waiting…</div>
+    </div>
+    <button class="st-toggle open" id="stToggle" title="Show instances">▾</button>
+  </div>
+
+  <!-- Instance dropdown (open by default) -->
+  <div class="inst-dropdown open" id="instDropdown">
+    <div class="inst-list" id="instList"></div>
+  </div>
+
+  <div class="session-strip">
+    <div class="ss-item">instances <span class="ss-val" id="ssInstances">0</span></div>
+    <div class="ss-item">active <span class="ss-val" id="ssActive">0</span></div>
+    <div class="ss-item">uptime <span class="ss-val" id="ssUptime">00:00</span></div>
+    <button class="ss-reset" id="ssReset" title="Reset stats">↺</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-p="feed"><span class="tab-i">🎲</span><span class="tab-l">Random</span></button>
+    <button class="tab" data-p="break"><span class="tab-i">🧘</span><span class="tab-l">Break</span></button>
+  </div>
+
+  <div class="feed-scroll" id="feedScroll">
+    <div class="pnl on feed-inner" id="p-feed"></div>
+    <div class="pnl feed-inner" id="p-break"></div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="bottombar">
+    <!-- opacity control hidden for now -->
+    <!--<div class="opacity-ctrl" id="opacityCtrl">
+      <button class="opacity-btn" data-op="0.25" title="25%">◔</button>
+      <button class="opacity-btn" data-op="0.5" title="50%">◑</button>
+      <button class="opacity-btn" data-op="0.75" title="75%">◕</button>
+      <button class="opacity-btn on" data-op="1" title="100%">●</button>
+    </div>-->
+    <button class="compact-btn" id="darkModeBtn" title="Toggle dark mode">🌙</button>
+    <button class="compact-btn" id="compactModeBtn" title="Stats only view">Compact</button>
+    <button class="compact-btn" id="compactBtn" title="Switch to Dynamic Island">Island</button>
+  </div>
+
+  <div class="return-overlay" id="returnOverlay">
+    <div class="ret-icon">✅</div>
+    <div class="ret-title">Claude Code finished!</div>
+    <div class="ret-sub">Your task is complete. Time to check the results.</div>
+    <button class="ret-btn" id="retGoBack">↩ Go back to code</button>
+    <div class="ret-dismiss" id="retDismiss">stay here a bit longer</div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

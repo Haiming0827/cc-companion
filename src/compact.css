@@ -1,0 +1,101 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: transparent; overflow: hidden; -webkit-app-region: drag; }
+
+.compact-bar {
+  display: flex;
+  flex-direction: column;
+  width: 420px;
+  padding: 10px 16px;
+  background: rgba(28, 24, 21, 0.9);
+  border-radius: 16px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-app-region: no-drag;
+  gap: 6px;
+}
+
+.compact-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.compact-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.4);
+}
+.compact-summary {
+  flex: 1;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-align: right;
+}
+.expand-arrow {
+  color: rgba(255,255,255,0.35);
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.compact-bar:hover .expand-arrow { color: rgba(255,255,255,0.8); }
+
+/* Instance rows */
+.compact-instances {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ci-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+}
+.ci-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ci-dot.active { background: #e8590c; }
+.ci-dot.idle { background: #666; }
+.ci-project {
+  flex: 1;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ci-dur {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  flex-shrink: 0;
+}
+.ci-dur.active { color: #e8590c; }
+.ci-status {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.ci-status.active { background: rgba(232,89,12,0.2); color: #e8590c; }
+.ci-status.idle { background: rgba(255,255,255,0.08); color: #888; }
+
+.ci-empty {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  padding: 4px;
+}
