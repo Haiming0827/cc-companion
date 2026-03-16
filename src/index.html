@@ -14,7 +14,6 @@
     <div class="tb-dots">
       <div class="tb-dot r" id="btnClose"></div>
       <div class="tb-dot y" id="btnMinimize"></div>
-      <div class="tb-dot g" id="btnMaximize"></div>
     </div>
     <div class="tb-title">CC Companion</div>
     <div class="tb-logo">⚔️</div>
@@ -44,12 +43,19 @@
 
   <div class="tabs">
     <button class="tab on" data-p="feed"><span class="tab-i">🎲</span><span class="tab-l">Random</span></button>
+    <button class="tab" data-p="vocab"><span class="tab-i">📖</span><span class="tab-l">Vocab</span></button>
     <button class="tab" data-p="break"><span class="tab-i">🧘</span><span class="tab-l">Break</span></button>
   </div>
 
   <div class="feed-scroll" id="feedScroll">
     <div class="pnl on feed-inner" id="p-feed"></div>
+    <div class="pnl feed-inner" id="p-vocab"></div>
     <div class="pnl feed-inner" id="p-break"></div>
+  </div>
+
+  <!-- Vocab fixed action bar (only shown on vocab tab) -->
+  <div class="vocab-bar" id="vocabBar">
+    <button class="btn btn-p" id="vocabNextBtn">next word →</button>
   </div>
 
   <!-- Bottom bar -->

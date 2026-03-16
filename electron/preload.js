@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('api', {
   fetchHN: (count) => ipcRenderer.invoke('fetch-hn', count),
   fetchRSS: (url) => ipcRenderer.invoke('fetch-rss', url),
   fetchSubredditInfo: (subreddit) => ipcRenderer.invoke('fetch-subreddit-info', subreddit),
+  fetchWord: (word) => ipcRenderer.invoke('fetch-word', word),
+  fetchRandomWord: () => ipcRenderer.invoke('fetch-random-word'),
 
   // Open URL in default browser
   openExternal: (url) => ipcRenderer.invoke('open-external', url),

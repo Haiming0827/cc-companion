@@ -35,6 +35,7 @@ function createWindow() {
     skipTaskbar: true,
     transparent: false,
     backgroundColor: '#f6f3ee',
+    icon: path.join(__dirname, '..', 'assets', 'icon.icns'),
     webPreferences: sharedWebPrefs
   });
 
@@ -78,6 +79,12 @@ function createCompactWindow() {
 }
 
 app.whenReady().then(() => {
+  // Set dock icon on macOS
+  if (process.platform === 'darwin') {
+    const dockIcon = nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'icon_1024.png'));
+    app.dock.setIcon(dockIcon);
+  }
+
   win = createWindow();
   compactWin = createCompactWindow();
   tray = createTray(win);
@@ -90,6 +97,14 @@ app.whenReady().then(() => {
     if (win && !win.isDestroyed()) win.webContents.send('claude-instances', snapshot);
     if (compactWin && !compactWin.isDestroyed()) compactWin.webContents.send('claude-instances', snapshot);
   });
+
+  // Refresh session stats (token counts, message counts) every 10s
+  setInterval(() => {
+    if (!watcher) return;
+    for (const [pid] of watcher.instances) {
+      watcher.refreshSessionStats(pid).then(() => watcher.emitIfChanged());
+    }
+  }, 10000);
 
   ipcMain.on('reset-watcher-stats', () => {
     if (watcher) watcher.resetStats();
@@ -290,6 +305,51 @@ app.whenReady().then(() => {
       };
     } catch (err) {
       console.error('Subreddit info error:', err);
+      return null;
+    }
+  });
+
+  // Dictionary API (Free Dictionary API — no key needed)
+  ipcMain.handle('fetch-word', async (_, word) => {
+    try {
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`, {
+        headers: { 'User-Agent': 'cc-companion/1.0' }
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!Array.isArray(data) || !data.length) return null;
+      const entry = data[0];
+      return {
+        word: entry.word,
+        phonetic: entry.phonetic || entry.phonetics?.find(p => p.text)?.text || null,
+        audioUrl: entry.phonetics?.find(p => p.audio)?.audio || null,
+        meanings: (entry.meanings || []).map(m => ({
+          partOfSpeech: m.partOfSpeech,
+          definitions: (m.definitions || []).slice(0, 3).map(d => ({
+            definition: d.definition,
+            example: d.example || null,
+            synonyms: (d.synonyms || []).slice(0, 5),
+          })),
+          synonyms: (m.synonyms || []).slice(0, 5),
+          antonyms: (m.antonyms || []).slice(0, 5),
+        })),
+        sourceUrls: entry.sourceUrls || [],
+      };
+    } catch (err) {
+      console.error('Dictionary fetch error:', err);
+      return null;
+    }
+  });
+
+  // Random word list (curated GRE/SAT-level words for vocab building)
+  ipcMain.handle('fetch-random-word', async () => {
+    try {
+      const res = await fetch('https://random-word-api.herokuapp.com/word', {
+        headers: { 'User-Agent': 'cc-companion/1.0' }
+      });
+      const data = await res.json();
+      return data?.[0] || null;
+    } catch {
       return null;
     }
   });

@@ -196,7 +196,7 @@ let isCompactView = false; // compact mode = stats only, no feed
 const cache = {};
 const STALE_AFTER = 5 * 60 * 1000;
 
-function clearCache() { clearCache(); }
+function clearCache() { for (const k in cache) delete cache[k]; }
 
 async function getCached(key, fetcher) {
   const cached = cache[key];
@@ -463,6 +463,12 @@ function updateActiveSubtext(subEl) {
   }).join(', ');
 }
 
+function formatTokens(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+
 function renderInstanceList() {
   const listEl = document.getElementById('instList');
   if (claudeSnapshot.count === 0) { listEl.innerHTML = '<div class="inst-empty">No Claude Code instances running</div>'; return; }
@@ -476,11 +482,27 @@ function renderInstanceList() {
       durHtml = `<div class="inst-dur" style="color:var(--t3)">idle ${formatTime(idleSec)}</div>`;
     }
     const memStr = inst.rss ? formatMem(inst.rss) : '';
+    const branchStr = inst.gitBranch ? ` · ${escapeHtml(inst.gitBranch)}` : '';
+    const modelStr = inst.model ? inst.model.replace(/^claude-/, '').split('-2')[0] : '';
+
+    // Token stats line
+    let statsHtml = '';
+    if (inst.turnCount > 0) {
+      const totalIn = inst.inputTokens + inst.cacheReadTokens + inst.cacheCreateTokens;
+      statsHtml = `<div class="inst-stats">
+        <span class="inst-stat">${inst.turnCount} turn${inst.turnCount !== 1 ? 's' : ''}</span>
+        <span class="inst-stat">↑${formatTokens(totalIn)}</span>
+        <span class="inst-stat">↓${formatTokens(inst.outputTokens)}</span>
+        ${modelStr ? `<span class="inst-stat inst-model">${modelStr}</span>` : ''}
+      </div>`;
+    }
+
     return `<div class="inst-row" data-pid="${inst.pid}">
       <div class="inst-dot ${sc}"></div>
       <div class="inst-info">
-        <div class="inst-project">${escapeHtml(inst.project)}</div>
+        <div class="inst-project">${escapeHtml(inst.project)}${branchStr}</div>
         <div class="inst-meta">PID ${inst.pid} · up ${inst.etime || '—'} · CPU ${inst.cpu.toFixed(1)}%${memStr ? ' · ' + memStr : ''}</div>
+        ${statsHtml}
       </div>
       ${durHtml}
       <div class="inst-status ${sc}">${sc === 'active' ? 'working' : 'idle'}</div>
@@ -710,6 +732,82 @@ function runBreakTimer(remaining) {
   }, 1000);
 }
 
+// ===== VOCAB TAB =====
+
+// Word list loaded from JSON file (1700+ curated GRE/SAT-level words)
+let VOCAB_WORDS = [];
+fetch('vocab-words.json').then(r => r.json()).then(words => { VOCAB_WORDS = words; }).catch(() => {
+  // Fallback if JSON fails to load
+  VOCAB_WORDS = ['ephemeral','ubiquitous','pragmatic','eloquent','resilient','esoteric','sanguine','ineffable','cacophony','mellifluous'];
+});
+
+let vocabLoading = false;
+let vocabHistory = []; // words already shown this session
+
+async function loadVocabWord() {
+  const container = document.getElementById('p-vocab');
+  if (vocabLoading) return;
+  vocabLoading = true;
+  container.innerHTML = '<div class="loading"><div class="loading-spinner"></div><br>finding a word…</div>';
+
+  try {
+    // Pick a random word from curated list (avoid repeats)
+    const available = VOCAB_WORDS.filter(w => !vocabHistory.includes(w));
+    if (available.length === 0) vocabHistory = []; // reset if exhausted
+    const pool = available.length > 0 ? available : VOCAB_WORDS;
+    const word = pool[Math.floor(Math.random() * pool.length)];
+    vocabHistory.push(word);
+
+    // Fetch definition from dictionary API
+    const data = window.api ? await window.api.fetchWord(word) : null;
+    if (data) {
+      renderVocabCard(container, data);
+    } else {
+      container.innerHTML = `<div class="loading">couldn't find "${escapeHtml(word)}" — tap shuffle</div>`;
+    }
+  } catch {
+    container.innerHTML = '<div class="loading">failed to load — try again</div>';
+  }
+  vocabLoading = false;
+}
+
+function renderVocabCard(container, data) {
+  const phoneticText = data.phonetic ? `<span class="vocab-phonetic">${escapeHtml(data.phonetic)}</span>` : '';
+  const audioBtn = data.audioUrl ? `<button class="vocab-audio-btn" id="vocabAudioBtn" title="Listen">🔊</button>` : '';
+
+  let meaningsHtml = '';
+  for (const meaning of data.meanings) {
+    meaningsHtml += `<div class="vocab-pos">${escapeHtml(meaning.partOfSpeech)}</div>`;
+    for (const def of meaning.definitions) {
+      meaningsHtml += `<div class="vocab-def">${escapeHtml(def.definition)}</div>`;
+      if (def.example) {
+        meaningsHtml += `<div class="vocab-example">"${escapeHtml(def.example)}"</div>`;
+      }
+    }
+    if (meaning.synonyms.length) {
+      meaningsHtml += `<div class="vocab-syns"><span class="vocab-syn-label">Synonyms:</span> ${meaning.synonyms.map(s => `<span class="vocab-syn">${escapeHtml(s)}</span>`).join(' ')}</div>`;
+    }
+    if (meaning.antonyms.length) {
+      meaningsHtml += `<div class="vocab-syns"><span class="vocab-syn-label">Antonyms:</span> ${meaning.antonyms.map(s => `<span class="vocab-ant">${escapeHtml(s)}</span>`).join(' ')}</div>`;
+    }
+  }
+
+  container.innerHTML = `
+    <div class="vocab-card">
+      <div class="vocab-header">
+        <div class="vocab-word">${escapeHtml(data.word)}</div>
+        <div class="vocab-pronounce">${phoneticText} ${audioBtn}</div>
+      </div>
+      <div class="vocab-meanings">${meaningsHtml}</div>
+    </div>`;
+
+  if (data.audioUrl) {
+    document.getElementById('vocabAudioBtn').addEventListener('click', () => {
+      new Audio(data.audioUrl).play().catch(() => {});
+    });
+  }
+}
+
 // ===== TABS =====
 
 function goTab(tabEl) {
@@ -720,6 +818,12 @@ function goTab(tabEl) {
   document.getElementById('feedScroll').scrollTop = 0;
   // If leaving feed while editing, reset
   if (tabEl.dataset.p !== 'feed' && editingCategories) { editingCategories = false; previewingCategory = null; }
+  // Show/hide vocab bar
+  document.getElementById('vocabBar').classList.toggle('show', tabEl.dataset.p === 'vocab');
+  // Load vocab on first visit
+  if (tabEl.dataset.p === 'vocab' && !document.getElementById('p-vocab').hasChildNodes()) {
+    loadVocabWord();
+  }
 }
 
 // ===== SHUFFLE =====
@@ -732,6 +836,8 @@ function shuffleCurrent() {
     clearCache();
     feedPosts = [];
     loadFeed(false);
+  } else if (active === 'vocab') {
+    loadVocabWord();
   } else if (active === 'break') {
     const keys = Object.keys(BREAK_INFO);
     curBreak = keys[Math.floor(Math.random() * keys.length)];
@@ -742,6 +848,7 @@ function shuffleCurrent() {
 // ===== EVENT LISTENERS =====
 
 document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => goTab(tab)));
+document.getElementById('vocabNextBtn').addEventListener('click', () => loadVocabWord());
 document.getElementById('ssReset').addEventListener('click', () => {
   document.getElementById('ssUptime').textContent = '00:00';
   if (window.api) window.api.resetWatcherStats();
@@ -758,7 +865,6 @@ document.getElementById('retDismiss').addEventListener('click', () => document.g
 // Window controls
 document.getElementById('btnClose').addEventListener('click', () => { if (window.api) window.api.close(); });
 document.getElementById('btnMinimize').addEventListener('click', () => { if (window.api) window.api.minimize(); });
-document.getElementById('btnMaximize').addEventListener('click', () => { if (window.api) window.api.restoreWindow(); });
 
 // Dark mode toggle
 let isDark = false;

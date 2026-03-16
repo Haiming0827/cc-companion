@@ -21,7 +21,8 @@
     "appId": "com.cc-companion.app",
     "productName": "CC Companion",
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.icns"
     },
     "files": [
       "electron/**/*",

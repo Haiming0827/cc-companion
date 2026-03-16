@@ -56,7 +56,7 @@ html,body{
   -webkit-app-region:drag;
 }
 .tb-dots{display:flex;gap:5px;-webkit-app-region:no-drag;}
-.tb-dot{width:10px;height:10px;border-radius:50%;cursor:pointer;transition:opacity .15s;}
+.tb-dot{width:13px;height:13px;border-radius:50%;cursor:pointer;transition:opacity .15s;}
 .tb-dot:hover{opacity:.8;}
 .tb-dot.r{background:#ee5a52;}.tb-dot.y{background:#e6a027;}.tb-dot.g{background:#54c22c;}
 .tb-title{flex:1;text-align:center;font-size:12px;font-weight:500;color:var(--t3);font-family:var(--mono);}
@@ -98,6 +98,9 @@ html,body{
 .inst-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;}
 .inst-status.active{background:var(--accs);color:var(--acc);}
 .inst-status.idle{background:var(--bgi);color:var(--t3);}
+.inst-stats{display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;}
+.inst-stat{font-size:9px;color:var(--t2);font-family:var(--mono);font-weight:500;}
+.inst-model{color:var(--pur);font-weight:600;}
 .inst-empty{text-align:center;padding:12px;font-size:11px;color:var(--t3);font-family:var(--mono);}
 
 /* SESSION STRIP */
@@ -259,6 +262,25 @@ html,body{
 .btn-stop:hover{border-color:var(--acc);color:var(--acc);}
 .btn-restart{background:var(--bgc);color:var(--t3);border-color:var(--bd);}
 .btn-restart:hover{border-color:var(--bdh);color:var(--t2);}
+
+/* VOCAB CARD */
+.vocab-card{background:var(--bgc);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:10px;}
+.vocab-header{margin-bottom:16px;border-bottom:1px solid var(--bd);padding-bottom:14px;}
+.vocab-word{font-family:var(--serif);font-size:28px;font-weight:700;color:var(--t1);margin-bottom:4px;}
+.vocab-pronounce{display:flex;align-items:center;gap:8px;}
+.vocab-phonetic{font-family:var(--mono);font-size:14px;color:var(--t2);}
+.vocab-audio-btn{background:none;border:1px solid var(--bd);border-radius:6px;cursor:pointer;padding:4px 8px;font-size:14px;transition:.15s;line-height:1;}
+.vocab-audio-btn:hover{border-color:var(--acc);background:var(--accs);}
+.vocab-meanings{display:flex;flex-direction:column;gap:12px;}
+.vocab-pos{font-size:11px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono);margin-bottom:2px;margin-top:4px;}
+.vocab-def{font-size:13px;color:var(--t1);line-height:1.6;padding-left:12px;border-left:2px solid var(--bd);}
+.vocab-example{font-size:12px;color:var(--t2);font-style:italic;line-height:1.5;padding-left:12px;margin-top:4px;}
+.vocab-syns{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:6px;padding-left:12px;}
+.vocab-syn-label{font-size:10px;font-weight:600;color:var(--t3);font-family:var(--mono);margin-right:2px;}
+.vocab-syn{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--blus);color:var(--blu);font-weight:500;}
+.vocab-ant{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--accs);color:var(--acc);font-weight:500;}
+.vocab-bar{display:none;justify-content:center;padding:10px 16px;background:var(--bgc);border-top:1px solid var(--bd);flex-shrink:0;}
+.vocab-bar.show{display:flex;}
 
 /* BOTTOM BAR */
 .bottombar{display:flex;align-items:center;justify-content:center;padding:8px 16px;background:var(--bgc);border-top:1px solid var(--bd);flex-shrink:0;gap:6px;}

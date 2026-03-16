@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A desktop companion app for developers using Claude Code. It monitors all running Claude Code instances in real time — tracking which projects are active, CPU/memory usage, working and idle durations — while serving curated content from Reddit and Substack during wait times. Built with Electron, vanilla HTML/CSS/JS, no framework.
+A desktop companion app for developers using Claude Code. It monitors all running Claude Code instances in real time — tracking which projects are active, CPU/memory usage, working and idle durations, token consumption, and conversation turns — while serving curated content from Reddit and Substack, vocabulary building exercises, and guided breaks during wait times. Built with Electron, vanilla HTML/CSS/JS, no framework.
 
 ---
 
@@ -15,17 +15,20 @@ cc-companion/
 │   ├── main.js              # Electron main process, IPC handlers, window management
 │   ├── preload.js           # Context bridge API for renderer
 │   ├── tray.js              # System tray icon & menu
-│   └── watcher.js           # Claude Code process detection & tracking
+│   └── watcher.js           # Claude Code process detection, session analytics
 ├── src/
 │   ├── index.html           # Main window HTML
 │   ├── styles.css           # All styles (light + dark mode)
-│   ├── app.js               # Main renderer logic (~750 lines)
+│   ├── app.js               # Main renderer logic (~900 lines)
+│   ├── vocab-words.json     # 1,700+ curated vocabulary words
 │   ├── compact.html         # Dynamic Island window
 │   ├── compact.css          # Dynamic Island styles
 │   └── compact.js           # Dynamic Island renderer
 ├── assets/
-│   ├── icon.png             # App icon
-│   └── iconTemplate.png     # Tray icon
+│   ├── icon_1024.png        # App icon (1024x1024 source)
+│   ├── icon.icns            # macOS app icon (generated from icon_1024.png)
+│   ├── iconTemplate.png     # Tray icon
+│   └── gen_icon.py          # Icon generation script (Pillow)
 └── dist/                    # electron-builder output
 ```
 
@@ -38,9 +41,11 @@ cc-companion/
 | Desktop shell | Electron 28 |
 | Frontend | Vanilla HTML/CSS/JS (no framework) |
 | Feed parsing | `rss-parser` (npm) — RSS/Atom/Substack feeds |
+| Dictionary | Free Dictionary API (`dictionaryapi.dev`) — no key required |
 | HTTP requests | Node.js built-in `fetch` |
 | Build/package | `electron-builder` — produces .dmg (Mac) |
 | Process watching | `ps` + `lsof` polling every 2 seconds |
+| Session analytics | Reads `~/.claude/sessions/` and `~/.claude/projects/` JSONL files |
 
 ### Dependencies
 
@@ -84,6 +89,16 @@ https://{name}.substack.com/feed
 - Articles older than 90 days filtered out
 - Previews under 200 chars hidden (too short to be useful)
 
+### Free Dictionary API (zero auth)
+
+```
+https://api.dictionaryapi.dev/api/v2/entries/en/{word}
+```
+
+- Returns phonetics (text + audio URL), definitions, examples, synonyms, antonyms
+- Grouped by part of speech
+- Used for the Vocab tab word cards
+
 ### Content Categories (15 categories, ~170 subreddits, ~70 Substacks)
 
 Categories sorted by total source count:
@@ -114,10 +129,10 @@ Users can also add custom sources (subreddit names or Substack URLs).
 
 ### Detection Strategy
 
-Polls every 2 seconds using `ps`:
+Polls every 2 seconds using `ps` (case-insensitive):
 
 ```
-ps -eo pid,tty,%cpu,%mem,rss,etime,command | grep Claude
+ps -eo pid,tty,%cpu,%mem,rss,etime,command | grep -i claude
 ```
 
 For each detected process:
@@ -128,12 +143,28 @@ For each detected process:
 - **Working directory** — resolved via `lsof -a -p {PID} -d cwd`
 - **Project name** — last segment of CWD path
 
+### Session Analytics
+
+For each instance, reads Claude's local data files:
+
+1. **`~/.claude/sessions/{pid}.json`** — maps PID to session ID and start time
+2. **`~/.claude/projects/{project-key}/{session-id}.jsonl`** — full conversation log
+
+The project key is derived from the CWD by replacing all non-alphanumeric characters with dashes (e.g., `/Users/john/my project` → `-Users-john-my-project`).
+
+From the JSONL, the watcher extracts:
+- **Turn count** — counts user messages that are real prompts (excludes tool-use result messages)
+- **Token usage** — input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens
+- **Model** — the Claude model ID (e.g., `claude-opus-4-6`)
+- **Git branch** — current branch from message metadata
+
+Session stats refresh every 10 seconds. Change detection prevents unnecessary IPC emissions.
+
 ### State Tracking
 
 - `activeStart` timestamp when instance transitions idle → active
 - `idleStart` timestamp when instance transitions active → idle
 - Working/idle durations computed live and tick every second in the UI
-- Change detection prevents unnecessary IPC emissions
 
 ### Instance Click-to-Focus
 
@@ -147,13 +178,14 @@ Clicking an instance row runs `cursor {project-folder}` to bring that specific C
 
 - **Window:** 630×816px, resizable down to 420×680, not always-on-top
 - **Layout zones (top to bottom):**
-  1. Title bar (42px) — traffic light dots, "CC Companion", draggable
+  1. Title bar (42px) — close/minimize dots, "CC Companion", draggable
   2. Status bar (38px) — "3 total · 1 working", click to toggle instance dropdown
-  3. Instance dropdown (open by default, scrollable if >5) — per-instance stats
+  3. Instance dropdown (open by default, scrollable if >5) — per-instance stats + session analytics
   4. Session strip (28px) — instance count / active count / longest uptime / reset
-  5. Tab bar (46px) — Random, Break
-  6. Scrollable content area (flex: 1) — feed posts or break timer
-  7. Bottom bar (38px) — dark mode toggle, Compact, Island
+  5. Tab bar (46px) — Random, Vocab, Break
+  6. Scrollable content area (flex: 1) — feed posts, vocab card, or break timer
+  7. Vocab action bar (only on Vocab tab) — fixed "next word" button
+  8. Bottom bar (38px) — dark mode toggle, Compact, Island
 
 ### 2. Compact Mode
 
@@ -175,16 +207,17 @@ Clicking an instance row runs `cursor {project-folder}` to bring that specific C
 
 ### Window
 
-- **Default size:** 630 × 816 px (1.5x × 1.2x from original 420×680)
+- **Default size:** 630 × 816 px
 - **Min size:** 420 × 680 px
 - **Background:** #f6f3ee (light) / #1a1a1a (dark)
-- **No native frame** — custom title bar with traffic light dots
+- **No native frame** — custom title bar with close/minimize dots (no maximize)
+- **App icon:** custom crossed-swords design with orange accent (icon.icns)
 
 ### Typography
 
 | Element | Font | Size |
 |---------|------|------|
-| Display headings | Fraunces (serif) | 15-18px |
+| Display headings | Fraunces (serif) | 15-28px |
 | Body text | DM Sans | 11-13px |
 | Monospace/data | IBM Plex Mono | 9-12px |
 
@@ -197,7 +230,7 @@ Clicking an instance row runs `cursor {project-folder}` to bring that specific C
 --acc:#e8590c; --accs:#fff4ed;
 ```
 
-**Dark mode (toggled via 🌙 button):**
+**Dark mode (toggled via bottom bar button):**
 ```css
 --bg:#1a1a1a; --bgc:#242424; --bgw:#2a2a2a; --bgi:#1e1e1e;
 --bd:#3a3a3a; --t1:#e8e4dd; --t2:#a8a29e; --t3:#6b6560;
@@ -215,6 +248,15 @@ Clicking an instance row runs `cursor {project-folder}` to bring that specific C
 - Score, comments, relative time ("2h ago")
 - Feed header with category pills, edit button, shuffle button
 - Source filter toggle: Both / Substack / Reddit
+
+**📖 Vocab** — Vocabulary builder showing one word at a time:
+- Large serif word heading
+- Phonetic pronunciation text + audio playback button
+- Definitions grouped by part of speech (noun, verb, adjective, etc.)
+- Example sentences in italics
+- Synonym pills (blue) and antonym pills (orange)
+- Fixed "next word" button in a dedicated bar below the scroll area
+- 1,700+ curated words loaded from `vocab-words.json`
 
 **🧘 Break** — Break timer with 5 types:
 - Neck Roll (30s), Wrist Stretch (30s), 20-20-20 Eyes (20s), Stand & Stretch (40s), Box Breathing (60s)
@@ -234,7 +276,7 @@ Clicking an instance row runs `cursor {project-folder}` to bring that specific C
 
 - In-memory cache keyed by source URL
 - 5-minute staleness threshold
-- `clearCache()` helper used by shuffle and category changes
+- `clearCache()` clears all cached entries
 - Feed posts capped at 200 items to prevent unbounded memory growth
 - Reddit posts filtered to 100+ upvotes
 - Substack articles filtered to last 90 days
@@ -271,8 +313,11 @@ Since the app is unsigned, macOS users need to right-click → Open → Open to 
 ## Key Implementation Details
 
 - **No framework** — vanilla JS with template literals and `insertAdjacentHTML`
-- **IPC architecture** — all network requests (Reddit JSON, RSS parsing) happen in the main process to avoid CORS. Renderer communicates via `ipcRenderer.invoke()`
+- **IPC architecture** — all network requests (Reddit JSON, RSS parsing, Dictionary API) happen in the main process to avoid CORS. Renderer communicates via `ipcRenderer.invoke()`
 - **Process detection** — macOS-specific (`ps`, `lsof`, `cursor` CLI, `osascript`)
+- **Session file reading** — reads Claude's `~/.claude/` directory structure for session metadata and conversation JSONL logs
 - **RSS sanitization** — XML is pre-processed to fix unescaped `&` characters before parsing
 - **Video support** — Reddit `fallback_url` MP4s, `.gifv` → `.mp4` conversion
 - **Event delegation** — global click handlers for dynamically rendered content (posts, categories, instances)
+- **Change detection** — watcher only emits IPC updates when snapshot data actually changes
+- **Vocab word source** — bundled JSON file (not API) for reliability; dictionary definitions fetched on demand
