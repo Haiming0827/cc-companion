@@ -16,79 +16,49 @@ const CONTENT_CATEGORIES = {
     substacks: [
       { url: 'https://newsletter.pragmaticengineer.com/feed', name: 'The Pragmatic Engineer' },
       { url: 'https://blog.bytebytego.com/feed', name: 'ByteByteGo' },
-      { url: 'https://www.developing.dev/feed', name: 'Developing Dev' },
       { url: 'https://engineercodex.substack.com/feed', name: 'Engineer Codex' },
-      { url: 'https://newsletter.systemdesign.one/feed', name: 'System Design One' },
-      { url: 'https://refactoring.fm/feed', name: 'Refactoring' },
       { url: 'https://theengineeringmanager.substack.com/feed', name: 'The Engineering Manager' },
-      { url: 'https://stratechery.com/feed/', name: 'Stratechery' },
-      { url: 'https://simonwillison.net/atom/everything/', name: 'Simon Willison' },
-      { url: 'https://blog.codinghorror.com/rss/', name: 'Coding Horror' },
-      { url: 'https://jvns.ca/atom.xml', name: 'Julia Evans' },
-      { url: 'https://danluu.com/atom.xml', name: 'Dan Luu' },
-      { url: 'https://css-tricks.com/feed/', name: 'CSS-Tricks' },
-      { url: 'https://changelog.com/feed', name: 'Changelog' },
-      { url: 'https://martinfowler.com/feed.atom', name: 'Martin Fowler' },
-      { url: 'https://overreacted.io/rss.xml', name: 'Overreacted (Dan Abramov)' },
     ],
-  },  // 32 total
+  },
   'Investing & Personal Finance': {
     e: '💰', d: 'Portfolio strategy, value investing, and building wealth',
     subreddits: ['investing', 'stocks', 'ValueInvesting', 'SecurityAnalysis', 'Bogleheads', 'dividends', 'personalfinance', 'FinancialPlanning', 'Fire', 'fatFIRE', 'financialindependence', 'RealEstate', 'options'],
     substacks: [
-      { url: 'https://www.moneywithkatie.com/feed', name: 'Money with Katie' },
-      { url: 'https://www.millervalue.com/feed', name: 'Miller Value' },
       { url: 'https://investornotes.substack.com/feed', name: 'Investor Notes' },
       { url: 'https://www.noahpinion.blog/feed', name: 'Noahpinion' },
-      { url: 'https://ofdollarsanddata.com/feed/', name: 'Of Dollars and Data' },
-      { url: 'https://awealthofcommonsense.com/feed/', name: 'A Wealth of Common Sense' },
-      { url: 'https://abnormalreturns.com/feed/', name: 'Abnormal Returns' },
-      { url: 'https://thereformedbroker.com/feed/', name: 'The Reformed Broker' },
-      { url: 'https://www.valuewalk.com/feed/', name: 'ValueWalk' },
-      { url: 'https://bankeronwheels.com/feed/', name: 'Banker on Wheels' },
     ],
-  },  // 23 total
+  },
   'Science & Learning': {
     e: '🧠', d: 'TIL, explainers, and mind-blowing facts',
     subreddits: ['todayilearned', 'interestingasfuck', 'ELI5', 'science', 'space', 'Futurology', 'askscience', 'DepthHub', 'TrueReddit', 'philosophy', 'AskHistorians', 'explainlikeimfive'],
     substacks: [
       { url: 'https://www.experimental-history.com/feed', name: 'Experimental History' },
-      { url: 'https://waitbutwhy.com/feed', name: 'Wait But Why' },
       { url: 'https://www.construction-physics.com/feed', name: 'Construction Physics' },
       { url: 'https://www.astralcodexten.com/feed', name: 'Astral Codex Ten' },
       { url: 'https://mindmatters.substack.com/feed', name: 'Mind Matters' },
-      { url: 'https://www.quantamagazine.org/feed/', name: 'Quanta Magazine' },
-      { url: 'https://nautil.us/feed/', name: 'Nautilus' },
       { url: 'https://dynomight.net/feed.xml', name: 'Dynomight' },
       { url: 'https://unchartedterritories.tomaspueyo.com/feed', name: 'Uncharted Territories' },
-      { url: 'https://arstechnica.com/science/feed/', name: 'Ars Technica Science' },
     ],
-  },  // 22 total
+  },
   'Design & Creative': {
     e: '🎨', d: 'Design inspiration and creative work',
     subreddits: ['Design', 'web_design', 'graphic_design', 'Art', 'mechanical_gifs', 'typography', 'UI_Design', 'InteriorDesign', 'PixelArt', 'generative', 'Lettering', 'Logo_Critique'],
     substacks: [
-      { url: 'https://www.densediscovery.com/feed', name: 'Dense Discovery' },
-      { url: 'https://www.creativeboom.com/feed/', name: 'Creative Boom' },
       { url: 'https://designlobster.substack.com/feed', name: 'Design Lobster' },
-      { url: 'https://sidebar.io/feed.xml', name: 'Sidebar' },
-      { url: 'https://alistapart.com/main/feed/', name: 'A List Apart' },
-      { url: 'https://www.smashingmagazine.com/feed/', name: 'Smashing Magazine' },
     ],
-  },  // 18 total
+  },
   'AI & Machine Learning': {
     e: '🤖', d: 'AI research, tools, and industry trends',
     subreddits: ['artificial', 'MachineLearning', 'LocalLLaMA', 'singularity', 'ChatGPT', 'ClaudeAI', 'StableDiffusion', 'OpenAI', 'deeplearning'],
     substacks: [
       { url: 'https://www.oneusefulthing.org/feed', name: 'One Useful Thing' },
       { url: 'https://thealgorithmicbridge.substack.com/feed', name: 'The Algorithmic Bridge' },
-      { url: 'https://lilianweng.github.io/index.xml', name: 'Lilian Weng' },
       { url: 'https://www.interconnects.ai/feed', name: 'Interconnects' },
       { url: 'https://importai.substack.com/feed', name: 'Import AI' },
       { url: 'https://aisnakeoil.substack.com/feed', name: 'AI Snake Oil' },
       { url: 'https://www.latent.space/feed', name: 'Latent Space' },
     ],
-  },  // 16 total
+  },
   'Startups & Product': {
     e: '🚀', d: 'Founders, product thinking, and growth',
     subreddits: ['startups', 'Entrepreneur', 'SaaS', 'indiehackers', 'ProductManagement', 'growthacking', 'smallbusiness'],
@@ -96,18 +66,14 @@ const CONTENT_CATEGORIES = {
       { url: 'https://www.lennysnewsletter.com/feed', name: 'Lenny\'s Newsletter' },
       { url: 'https://www.notboring.co/feed', name: 'Not Boring' },
       { url: 'https://sacks.substack.com/feed', name: 'Sacks' },
-      { url: 'https://andrewchen.com/feed/', name: 'Andrew Chen' },
       { url: 'https://www.newcomer.co/feed', name: 'Newcomer' },
-      { url: 'https://kellblog.com/feed/', name: 'Kellblog' },
-      { url: 'https://avc.com/feed/', name: 'AVC (Fred Wilson)' },
-      { url: 'https://hunterwalk.com/feed/', name: 'Hunter Walk' },
     ],
-  },  // 15 total
+  },
   'Comedy': {
     e: '😂', d: 'Laughs, memes, and absurdity',
     subreddits: ['ProgrammerHumor', 'Showerthoughts', 'DiWHY', 'tifu', 'AbsoluteUnits', 'funny', 'memes', 'MadeMeSmile', 'ContagiousLaughter', 'WhitePeopleTwitter', 'BlackPeopleTwitter', 'BrandNewSentence', 'rareinsults', 'ATBGE'],
     substacks: [],
-  },  // 14 total
+  },
   'News & World': {
     e: '🌍', d: 'What\'s happening around the globe',
     subreddits: ['worldnews', 'UpliftingNews', 'MapPorn', 'OldSchoolCool', 'geopolitics', 'TrueReddit', 'neutralnews'],
@@ -117,62 +83,48 @@ const CONTENT_CATEGORIES = {
       { url: 'https://www.thefitzwilliam.com/feed', name: 'The Fitzwilliam' },
       { url: 'https://www.persuasion.community/feed', name: 'Persuasion' },
       { url: 'https://www.honest-broker.com/feed', name: 'The Honest Broker' },
-      { url: 'https://techcrunch.com/feed/', name: 'TechCrunch' },
     ],
-  },  // 13 total
+  },
   'Business & Economics': {
     e: '📈', d: 'Markets, macro, and business strategy',
     subreddits: ['wallstreetbets', 'econmonitor', 'economics', 'business', 'AskEconomics'],
     substacks: [
       { url: 'https://thegeneralist.substack.com/feed', name: 'The Generalist' },
-      { url: 'https://www.saastr.com/feed', name: 'SaaStr' },
       { url: 'https://www.noahpinion.blog/feed', name: 'Noahpinion' },
     ],
-  },  // 8 total (split from old Business & Finance — investing is separate now)
+  },
   'Gaming': {
     e: '🎮', d: 'Games, esports, and gaming culture',
     subreddits: ['gaming', 'Games', 'pcgaming', 'indiegaming', 'GameDeals', 'truegaming', 'patientgamers', 'gamedev', 'NintendoSwitch', 'PS5'],
     substacks: [
       { url: 'https://hitpoints.substack.com/feed', name: 'Hit Points' },
-      { url: 'https://www.gamesindustry.biz/feed/news', name: 'GamesIndustry.biz' },
     ],
-  },  // 12 total
+  },
   'Self-Help & Growth': {
     e: '🌱', d: 'Personal development, motivation, and life advice',
     subreddits: ['selfimprovement', 'DecidingToBeBetter', 'getdisciplined', 'socialskills', 'confidence', 'LifeProTips', 'selfhelp', 'motivation', 'Journaling'],
-    substacks: [
-      { url: 'https://jamesclear.com/feed', name: 'James Clear' },
-      { url: 'https://nesslabs.com/feed', name: 'Ness Labs' },
-    ],
-  },  // 11 total
+    substacks: [],
+  },
   'Visual & Cozy': {
     e: '🏠', d: 'Beautiful places, food, and good vibes',
     subreddits: ['FoodPorn', 'CozyPlaces', 'spaceporn', 'rarepuppers', 'EarthPorn', 'CityPorn', 'ArchitecturePorn', 'AmateurRoomPorn', 'Baking', 'gardening', 'houseplants'],
     substacks: [],
-  },  // 11 total
+  },
   'Productivity & Thinking': {
     e: '⚡', d: 'Mental models, habits, and working smarter',
     subreddits: ['productivity', 'Stoicism', 'ZenHabits', 'nosurf'],
-    substacks: [
-      { url: 'https://fortelabs.com/feed/', name: 'Forte Labs' },
-      { url: 'https://blog.rescuetime.com/feed/', name: 'RescueTime' },
-    ],
-  },  // 6 total
+    substacks: [],
+  },
   'Health & Wellness': {
     e: '🧘', d: 'Fitness, nutrition, and mental health',
     subreddits: ['Fitness', 'nutrition', 'HealthyFood', 'bodyweightfitness', 'Meditation', 'running', 'sleep', 'loseit', 'flexibility'],
-    substacks: [
-      { url: 'https://peterattiamd.com/feed/', name: 'Peter Attia' },
-    ],
-  },  // 10 total
+    substacks: [],
+  },
   'Crypto & Web3': {
     e: '₿', d: 'Blockchain, DeFi, and the decentralized web',
     subreddits: ['CryptoCurrency', 'ethereum', 'defi', 'Bitcoin', 'solana', 'CryptoTechnology'],
-    substacks: [
-      { url: 'https://www.theblock.co/rss.xml', name: 'The Block' },
-      { url: 'https://decrypt.co/feed', name: 'Decrypt' },
-    ],
-  },  // 8 total
+    substacks: [],
+  },
 };
 
 const DEFAULT_CATEGORIES = new Set(['Comedy', 'Tech & Dev', 'Science & Learning']);
@@ -433,11 +385,11 @@ function updateStatusBar(snapshot) {
     updateActiveSubtext(subEl);
   } else {
     statusEl.className = 'status idle';
-    msgEl.textContent = `${snapshot.count} total · all idle`;
+    msgEl.textContent = `${snapshot.count} total · all ready`;
     subEl.textContent = snapshot.instances.map(i => {
       if (i.idleStart) {
         const dur = Math.floor((Date.now() - i.idleStart) / 1000);
-        return `${i.project} (idle ${formatTime(dur)})`;
+        return `${i.project} (ready ${formatTime(dur)})`;
       }
       return i.project;
     }).join(', ');
@@ -469,6 +421,13 @@ function formatTokens(n) {
   return String(n);
 }
 
+function getContextLimit(model) {
+  if (!model) return 200000;
+  const m = model.toLowerCase();
+  if (m.includes('opus')) return 1000000;  // Opus 4.6 has 1M context
+  return 200000; // Sonnet, Haiku = 200k
+}
+
 function renderInstanceList() {
   const listEl = document.getElementById('instList');
   if (claudeSnapshot.count === 0) { listEl.innerHTML = '<div class="inst-empty">No Claude Code instances running</div>'; return; }
@@ -479,22 +438,32 @@ function renderInstanceList() {
       durHtml = `<div class="inst-dur">${formatTime(Math.floor((Date.now() - inst.activeStart) / 1000))}</div>`;
     } else if (!inst.active && inst.idleStart) {
       const idleSec = Math.floor((Date.now() - inst.idleStart) / 1000);
-      durHtml = `<div class="inst-dur" style="color:var(--t3)">idle ${formatTime(idleSec)}</div>`;
+      durHtml = `<div class="inst-dur" style="color:var(--t3)">${formatTime(idleSec)}</div>`;
     }
     const memStr = inst.rss ? formatMem(inst.rss) : '';
     const branchStr = inst.gitBranch ? ` · ${escapeHtml(inst.gitBranch)}` : '';
     const modelStr = inst.model ? inst.model.replace(/^claude-/, '').split('-2')[0] : '';
 
-    // Token stats line
+    // Token stats + context usage bar
     let statsHtml = '';
     if (inst.turnCount > 0) {
       const totalIn = inst.inputTokens + inst.cacheReadTokens + inst.cacheCreateTokens;
+      // Context usage: contextTokens = last API call's total input (current window fill)
+      const contextLimit = getContextLimit(inst.model);
+      const ctxPct = inst.contextTokens > 0 ? Math.min(100, (inst.contextTokens / contextLimit) * 100) : 0;
+      const ctxColor = ctxPct > 80 ? 'var(--acc)' : ctxPct > 50 ? '#e8a33e' : '#5ba8c8';
+      const ctxBar = inst.contextTokens > 0
+        ? `<div class="ctx-usage">
+            <div class="ctx-bar"><div class="ctx-fill" style="width:${ctxPct.toFixed(1)}%;background:${ctxColor}"></div></div>
+            <span class="ctx-label">${formatTokens(inst.contextTokens)} / ${formatTokens(contextLimit)} (${ctxPct.toFixed(0)}%)</span>
+          </div>`
+        : '';
       statsHtml = `<div class="inst-stats">
         <span class="inst-stat">${inst.turnCount} turn${inst.turnCount !== 1 ? 's' : ''}</span>
         <span class="inst-stat">↑${formatTokens(totalIn)}</span>
         <span class="inst-stat">↓${formatTokens(inst.outputTokens)}</span>
         ${modelStr ? `<span class="inst-stat inst-model">${modelStr}</span>` : ''}
-      </div>`;
+      </div>${ctxBar}`;
     }
 
     return `<div class="inst-row" data-pid="${inst.pid}">
@@ -505,7 +474,7 @@ function renderInstanceList() {
         ${statsHtml}
       </div>
       ${durHtml}
-      <div class="inst-status ${sc}">${sc === 'active' ? 'working' : 'idle'}</div>
+      <div class="inst-status ${sc}">${sc === 'active' ? 'working' : 'ready'}</div>
     </div>`;
   }).join('');
 }
@@ -992,7 +961,7 @@ setInterval(() => {
     updateActiveSubtext(subEl);
   } else {
     subEl.textContent = claudeSnapshot.instances.map(i => {
-      if (i.idleStart) return `${i.project} (idle ${formatTime(Math.floor((Date.now() - i.idleStart) / 1000))})`;
+      if (i.idleStart) return `${i.project} (ready ${formatTime(Math.floor((Date.now() - i.idleStart) / 1000))})`;
       return i.project;
     }).join(', ');
   }

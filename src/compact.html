@@ -9,12 +9,29 @@
 </head>
 <body>
 <div class="compact-bar" id="compactBar">
-  <div class="compact-header">
-    <div class="compact-title">CC Companion</div>
-    <div class="compact-summary" id="compactSummary">no instances</div>
-    <span class="expand-arrow">▼</span>
+  <div class="compact-header" id="compactHeader">
+    <div class="clawd-icon" id="claudeIcon">
+      <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+        <!-- Body -->
+        <rect x="2" y="2" width="16" height="13" rx="2" fill="#c4765a"/>
+        <!-- Left eye -->
+        <rect x="5" y="5" width="3" height="3" fill="#1a1a1a"/>
+        <!-- Right eye -->
+        <rect x="12" y="5" width="3" height="3" fill="#1a1a1a"/>
+        <!-- Legs -->
+        <rect x="3" y="15" width="3" height="4" fill="#c4765a"/>
+        <rect x="8.5" y="15" width="3" height="4" fill="#c4765a"/>
+        <rect x="14" y="15" width="3" height="4" fill="#c4765a"/>
+      </svg>
+    </div>
+    <div class="compact-info" id="compactInfo">
+      <div class="compact-title">CC Companion</div>
+      <div class="compact-summary" id="compactSummary">no instances</div>
+    </div>
+    <button class="snap-btn no-drag" id="snapBtn" title="Snap to top center">⊙</button>
+    <span class="expand-arrow no-drag" id="expandBtn">▼</span>
   </div>
-  <div class="compact-instances" id="compactInstances"></div>
+  <div class="compact-instances no-drag" id="compactInstances"></div>
 </div>
 <script src="compact.js"></script>
 </body>

@@ -97,10 +97,14 @@ html,body{
 .inst-dur{font-size:9px;font-weight:600;color:var(--acc);font-family:var(--mono);flex-shrink:0;margin-right:4px;}
 .inst-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;}
 .inst-status.active{background:var(--accs);color:var(--acc);}
-.inst-status.idle{background:var(--bgi);color:var(--t3);}
+.inst-status.idle{background:var(--grns);color:var(--grn);}
 .inst-stats{display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;}
 .inst-stat{font-size:9px;color:var(--t2);font-family:var(--mono);font-weight:500;}
 .inst-model{color:var(--pur);font-weight:600;}
+.ctx-usage{display:flex;align-items:center;gap:6px;margin-top:4px;}
+.ctx-bar{flex:1;height:4px;background:var(--bgi);border-radius:2px;overflow:hidden;max-width:120px;}
+.ctx-fill{height:100%;border-radius:2px;transition:width 0.3s ease;}
+.ctx-label{font-size:9px;color:var(--t3);font-family:var(--mono);white-space:nowrap;}
 .inst-empty{text-align:center;padding:12px;font-size:11px;color:var(--t3);font-family:var(--mono);}
 
 /* SESSION STRIP */

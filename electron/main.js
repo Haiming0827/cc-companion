@@ -22,11 +22,11 @@ function createWindow() {
 
   win = new BrowserWindow({
     width: 630,
-    height: 816,
+    height: 900,
     minWidth: 420,
     minHeight: 680,
     maxWidth: 630,
-    maxHeight: 816,
+    maxHeight: 960,
     x: screenW - 650,
     y: Math.floor((screenH - 816) / 2),
     frame: false,
@@ -34,6 +34,7 @@ function createWindow() {
     alwaysOnTop: false,
     skipTaskbar: true,
     transparent: false,
+    show: false, // Don't show until explicitly toggled
     backgroundColor: '#f6f3ee',
     icon: path.join(__dirname, '..', 'assets', 'icon.icns'),
     webPreferences: sharedWebPrefs
@@ -55,7 +56,7 @@ function createWindow() {
 function createCompactWindow() {
   const { width: screenW } = screen.getPrimaryDisplay().workAreaSize;
   const compactW = 420;
-  const compactH = 120;
+  const compactH = 180;
 
   compactWin = new BrowserWindow({
     width: compactW,
@@ -73,7 +74,6 @@ function createCompactWindow() {
 
   compactWin.loadFile(path.join(__dirname, '..', 'src', 'compact.html'));
   compactWin.setVisibleOnAllWorkspaces(true);
-  compactWin.hide();
 
   return compactWin;
 }
@@ -88,6 +88,9 @@ app.whenReady().then(() => {
   win = createWindow();
   compactWin = createCompactWindow();
   tray = createTray(win);
+
+  // Default to compact (Dynamic Island) mode on launch
+  isCompactMode = true;
 
   // Start Claude Code watcher
   watcher = new ClaudeWatcher();
@@ -125,29 +128,57 @@ app.whenReady().then(() => {
     }
   });
 
+  // Drag compact window by delta
+  ipcMain.on('move-compact-window', (_, { dx, dy }) => {
+    if (!compactWin || compactWin.isDestroyed()) return;
+    const [x, y] = compactWin.getPosition();
+    compactWin.setPosition(x + Math.round(dx), y + Math.round(dy));
+  });
+
+  // Snap compact window to top-center of screen
+  ipcMain.on('snap-compact-window', () => {
+    if (!compactWin || compactWin.isDestroyed()) return;
+    const { width: screenW } = screen.getPrimaryDisplay().workAreaSize;
+    const compactW = 420;
+    compactWin.setPosition(Math.floor((screenW - compactW) / 2), 0);
+  });
+
   // Focus a Claude instance by opening its project folder in Cursor
   ipcMain.handle('focus-instance', async (_, pid) => {
-    // Look up the CWD for this PID from the watcher
     const inst = watcher ? watcher.getInstance(pid) : null;
     const cwd = inst?.cwd;
 
-    if (cwd && cwd !== 'unknown') {
-      // Use Cursor CLI to focus the workspace window for this project
-      return new Promise((resolve) => {
-        execFile('cursor', [cwd], (err) => {
+    return new Promise((resolve) => {
+      if (cwd && cwd !== 'unknown') {
+        // Use macOS `open` (always in PATH) to open the project folder in Cursor
+        execFile('open', ['-a', 'Cursor', cwd], (err) => {
           if (err) {
-            // Fallback: just activate Cursor
-            execFile('osascript', ['-e', 'tell application "Cursor" to activate'], () => resolve());
+            // Fallback: activate Cursor without a specific folder
+            execFile('open', ['-a', 'Cursor'], () => resolve());
           } else {
             resolve();
           }
         });
-      });
+      } else {
+        execFile('open', ['-a', 'Cursor'], () => resolve());
+      }
+    });
+  });
+
+  // Auto-resize compact window to fit content
+  ipcMain.on('resize-compact', (_, { height }) => {
+    if (!compactWin || compactWin.isDestroyed()) return;
+    const [w] = compactWin.getSize();
+    compactWin.setSize(w, Math.max(50, Math.min(400, height)));
+  });
+
+  // Make transparent areas click-through for compact window
+  ipcMain.on('set-ignore-mouse', (_, ignore) => {
+    if (!compactWin || compactWin.isDestroyed()) return;
+    if (ignore) {
+      compactWin.setIgnoreMouseEvents(true, { forward: true });
     } else {
-      // Fallback: just bring Cursor to front
-      return new Promise((resolve) => {
-        execFile('osascript', ['-e', 'tell application "Cursor" to activate'], () => resolve());
-      });
+      compactWin.setIgnoreMouseEvents(false);
     }
   });
 
@@ -163,7 +194,7 @@ app.whenReady().then(() => {
   ipcMain.on('restore-window', () => {
     if (win && !win.isDestroyed()) {
       win.setMinimumSize(420, 680);
-      win.setSize(630, 816, true);
+      win.setSize(630, 900, true);
     }
   });
 
@@ -376,5 +407,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (win) win.show();
+  if (isCompactMode) {
+    if (compactWin) compactWin.show();
+  } else {
+    if (win) win.show();
+  }
 });
