@@ -1,9 +1,12 @@
 const { exec } = require('child_process');
+const { promisify } = require('util');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const EventEmitter = require('events');
 const readline = require('readline');
+
+const execAsync = promisify(exec);
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
 const SESSIONS_DIR = path.join(CLAUDE_DIR, 'sessions');
@@ -19,6 +22,33 @@ class ClaudeWatcher extends EventEmitter {
     this.instances = new Map(); // pid -> instance info
     this.pollInterval = null;
     this._lastSnapshotJSON = null; // for change detection
+  }
+
+  async _detectTerminalApp(pid) {
+    try {
+      let currentPid = pid;
+      for (let i = 0; i < 10; i++) {
+        // Get parent pid of current process
+        const { stdout: ppidOut } = await execAsync(`ps -o ppid= -p ${currentPid}`);
+        const ppid = parseInt(ppidOut.trim());
+        if (!ppid || ppid <= 1) break;
+
+        // Get the parent's comm and check for known terminal apps
+        const { stdout: commOut } = await execAsync(`ps -o comm= -p ${ppid}`);
+        const comm = commOut.trim();
+
+        if (comm.includes('/Terminal.app/')) return 'Terminal';
+        if (comm.includes('/iTerm2.app/') || comm.includes('/iTerm.app/')) return 'iTerm2';
+        if (comm.includes('/Warp.app/')) return 'Warp';
+        if (comm.includes('/Cursor.app/')) return 'Cursor';
+        if (comm.includes('/Visual Studio Code.app/') || comm.includes('/Code.app/')) return 'Visual Studio Code';
+        if (comm.includes('/Alacritty.app/')) return 'Alacritty';
+        if (comm.includes('/kitty.app/')) return 'kitty';
+
+        currentPid = ppid;
+      }
+    } catch { /* process tree walk failed */ }
+    return null;
   }
 
   start() {
@@ -66,21 +96,7 @@ class ClaudeWatcher extends EventEmitter {
               existing.etime = etime;
               existing.lastSeen = now;
 
-              // Hybrid activity detection:
-              // 1. CPU > 15% = definitely working (tool execution, streaming)
-              //    High threshold avoids false triggers from typing in terminal
-              // 2. JSONL modified in last 10s = working (API calls, message exchange)
-              //    Covers network-wait periods when CPU is idle
-              // Only "ready" when BOTH signals are cold.
-              const cpuHot = cpu > 15;
-              let jsonlActive = false;
-              if (existing._jsonlPath) {
-                try {
-                  const st = fs.statSync(existing._jsonlPath);
-                  jsonlActive = (now - st.mtimeMs) < 10000;
-                } catch { /* file gone or inaccessible */ }
-              }
-              const isActive = cpuHot || jsonlActive;
+              const isActive = cpu > 3;
               const wasActive = existing.active;
               existing.active = isActive;
 
@@ -93,7 +109,7 @@ class ClaudeWatcher extends EventEmitter {
               }
             } else {
               hasNewInstances = true;
-              this._initInstance(pid, tty, cpu, mem, rss, etime, false, now);
+              this._initInstance(pid, tty, cpu, mem, rss, etime, cpu > 3, now);
             }
           }
         }
@@ -120,6 +136,9 @@ class ClaudeWatcher extends EventEmitter {
     // Pass both the lsof cwd and the session-file cwd for robust JSONL lookup
     const sessionStats = await this._getSessionStats(sessionInfo?.sessionId, cwd, sessionInfo?.cwd);
 
+    // Detect terminal app (async, cached once)
+    const terminalApp = await this._detectTerminalApp(pid);
+
     this.instances.set(pid, {
       pid, tty, cpu, mem, rss,
       active: isActive, etime,
@@ -128,7 +147,7 @@ class ClaudeWatcher extends EventEmitter {
       activeStart: isActive ? now : null,
       idleStart: isActive ? null : now,
       lastSeen: now,
-      _jsonlPath: sessionStats?.jsonlPath || null,
+      _terminalApp: terminalApp,
       // Session metadata
       sessionId: sessionInfo?.sessionId || null,
       startedAt: sessionInfo?.startedAt || null,
@@ -182,7 +201,8 @@ class ClaudeWatcher extends EventEmitter {
     }
 
     // Fallback: scan project directory for most-recently-modified JSONL
-    if (!jsonlPath) {
+    // But only if we have no sessionId — if we do, the JSONL just hasn't been created yet
+    if (!jsonlPath && !sessionId) {
       for (const c of cwds) {
         const projectKey = toProjectKey(c);
         const projectDir = path.join(PROJECTS_DIR, projectKey);
@@ -254,7 +274,11 @@ class ClaudeWatcher extends EventEmitter {
   async refreshSessionStats(pid) {
     const inst = this.instances.get(pid);
     if (!inst) return;
-    // sessionId/cwd already cached on the instance from init — no need to re-read session file
+    // Re-read session file to detect /clear (new sessionId, same pid)
+    const sessionInfo = this._readSessionFile(pid);
+    if (sessionInfo?.sessionId && sessionInfo.sessionId !== inst.sessionId) {
+      inst.sessionId = sessionInfo.sessionId;
+    }
     const stats = await this._getSessionStats(inst.sessionId, inst.cwd);
     if (stats) {
       inst.turnCount = stats.turnCount;
@@ -265,7 +289,6 @@ class ClaudeWatcher extends EventEmitter {
       inst.contextTokens = stats.contextTokens;
       inst.model = stats.model;
       inst.gitBranch = stats.gitBranch;
-      if (stats.jsonlPath) inst._jsonlPath = stats.jsonlPath;
     }
   }
 
@@ -280,6 +303,11 @@ class ClaudeWatcher extends EventEmitter {
 
   getInstance(pid) {
     return this.instances.get(pid) || null;
+  }
+
+  getTerminalApp(pid) {
+    const inst = this.instances.get(pid);
+    return inst?._terminalApp || null;
   }
 
   getCwd(pid) {
@@ -299,7 +327,7 @@ class ClaudeWatcher extends EventEmitter {
     let totalActive = 0;
     for (const [, inst] of this.instances) {
       // Strip private fields from snapshot sent to renderer
-      const { _jsonlPath, ...publicInst } = inst;
+      const { _terminalApp, ...publicInst } = inst;
       instances.push(publicInst);
       if (inst.active) totalActive++;
     }

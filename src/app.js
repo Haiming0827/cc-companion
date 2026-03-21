@@ -214,8 +214,12 @@ async function fetchRedditFeed(sub) {
     } else if (p.preview) {
       image_url = p.preview; // use preview even for external-preview URLs
     }
-    // External link detection: url points outside reddit
-    const isExternalLink = p.domain && !p.domain.includes('reddit.com') && !p.domain.includes('redd.it') && p.post_hint === 'link';
+    // External link detection: url points outside reddit (any non-reddit, non-image URL)
+    const isExternalLink = p.domain
+      && !p.domain.includes('reddit.com')
+      && !p.domain.includes('redd.it')
+      && !p.domain.includes('i.imgur.com')
+      && !/\.(jpe?g|png|gif|webp)$/i.test(directUrl);
     return {
       id: `reddit-${p.id}`, source: 'reddit', platform_label: `r/${p.subreddit}`, avatar: '🔸',
       author: p.author, text: p.title + (p.selftext ? '\n' + p.selftext.slice(0, 200) : ''),
@@ -387,10 +391,7 @@ function updateStatusBar(snapshot) {
     statusEl.className = 'status idle';
     msgEl.textContent = `${snapshot.count} total · all ready`;
     subEl.textContent = snapshot.instances.map(i => {
-      if (i.idleStart) {
-        const dur = Math.floor((Date.now() - i.idleStart) / 1000);
-        return `${i.project} (ready ${formatTime(dur)})`;
-      }
+      if (i.idleStart) return `${i.project} (ready)`;
       return i.project;
     }).join(', ');
   }
@@ -436,9 +437,6 @@ function renderInstanceList() {
     let durHtml = '';
     if (inst.active && inst.activeStart) {
       durHtml = `<div class="inst-dur">${formatTime(Math.floor((Date.now() - inst.activeStart) / 1000))}</div>`;
-    } else if (!inst.active && inst.idleStart) {
-      const idleSec = Math.floor((Date.now() - inst.idleStart) / 1000);
-      durHtml = `<div class="inst-dur" style="color:var(--t3)">${formatTime(idleSec)}</div>`;
     }
     const memStr = inst.rss ? formatMem(inst.rss) : '';
     const branchStr = inst.gitBranch ? ` · ${escapeHtml(inst.gitBranch)}` : '';
@@ -961,7 +959,7 @@ setInterval(() => {
     updateActiveSubtext(subEl);
   } else {
     subEl.textContent = claudeSnapshot.instances.map(i => {
-      if (i.idleStart) return `${i.project} (ready ${formatTime(Math.floor((Date.now() - i.idleStart) / 1000))})`;
+      if (i.idleStart) return `${i.project} (ready)`;
       return i.project;
     }).join(', ');
   }

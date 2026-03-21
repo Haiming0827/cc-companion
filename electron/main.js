@@ -128,6 +128,11 @@ app.whenReady().then(() => {
     }
   });
 
+  // Hide compact window to dock
+  ipcMain.on('hide-compact', () => {
+    if (compactWin && !compactWin.isDestroyed()) compactWin.hide();
+  });
+
   // Drag compact window by delta
   ipcMain.on('move-compact-window', (_, { dx, dy }) => {
     if (!compactWin || compactWin.isDestroyed()) return;
@@ -143,24 +148,23 @@ app.whenReady().then(() => {
     compactWin.setPosition(Math.floor((screenW - compactW) / 2), 0);
   });
 
-  // Focus a Claude instance by opening its project folder in Cursor
+  // Focus a Claude instance by opening its terminal app
   ipcMain.handle('focus-instance', async (_, pid) => {
     const inst = watcher ? watcher.getInstance(pid) : null;
     const cwd = inst?.cwd;
+    const appName = (watcher ? watcher.getTerminalApp(pid) : null) || 'Terminal';
 
     return new Promise((resolve) => {
       if (cwd && cwd !== 'unknown') {
-        // Use macOS `open` (always in PATH) to open the project folder in Cursor
-        execFile('open', ['-a', 'Cursor', cwd], (err) => {
+        execFile('open', ['-a', appName, cwd], (err) => {
           if (err) {
-            // Fallback: activate Cursor without a specific folder
-            execFile('open', ['-a', 'Cursor'], () => resolve());
+            execFile('open', ['-a', appName], () => resolve());
           } else {
             resolve();
           }
         });
       } else {
-        execFile('open', ['-a', 'Cursor'], () => resolve());
+        execFile('open', ['-a', appName], () => resolve());
       }
     });
   });

@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Dynamic Island
   toggleCompact: () => ipcRenderer.send('toggle-compact'),
+  hideCompact: () => ipcRenderer.send('hide-compact'),
   moveCompactWindow: (dx, dy) => ipcRenderer.send('move-compact-window', { dx, dy }),
   snapCompactWindow: () => ipcRenderer.send('snap-compact-window'),
   resizeCompact: (height) => ipcRenderer.send('resize-compact', { height }),
