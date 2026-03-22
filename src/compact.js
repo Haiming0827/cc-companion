@@ -363,13 +363,21 @@ document.addEventListener('click', (e) => {
 let windowDrag = false;
 let windowDragX = 0, windowDragY = 0;
 
+// ── Theme persistence (default to light) ──────────────────────
+if (localStorage.getItem('theme') !== 'dark') {
+  document.getElementById('compactBar').classList.add('light');
+  document.getElementById('themeBtn').textContent = '☾';
+}
+
 // ── Header buttons ───────────────────────────────────────────
 document.getElementById('themeBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const bar = document.getElementById('compactBar');
   const btn = document.getElementById('themeBtn');
   bar.classList.toggle('light');
-  btn.textContent = bar.classList.contains('light') ? '☾' : '☀';
+  const isLight = bar.classList.contains('light');
+  btn.textContent = isLight ? '☾' : '☀';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
 });
 document.getElementById('snapBtn').addEventListener('click', (e) => {
   e.stopPropagation();

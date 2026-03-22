@@ -63,19 +63,112 @@ class ClaudeWatcher extends EventEmitter {
     }
   }
 
-  // Check JSONL mtime to determine if an instance is actively working
-  _isJsonlActive(inst) {
-    if (!inst.sessionId) return false;
-    const cwds = [inst.cwd].filter(Boolean);
+  // Read the last JSONL entry to determine Claude's actual state.
+  // Returns { entry, mtimeMs } or null.
+  // This is the ground truth — Claude writes an entry for each state transition:
+  //   end_turn → finished, waiting for user input
+  //   tool_use → a tool/subagent is executing
+  //   user message → Claude is processing a prompt or tool result
+  _getLastJsonlEntry(inst) {
+    if (!inst.sessionId) return null;
+    const cwds = [...new Set([inst._sessionCwd, inst.cwd].filter(Boolean))];
     for (const c of cwds) {
       const projectKey = toProjectKey(c);
       const jsonlPath = path.join(PROJECTS_DIR, projectKey, `${inst.sessionId}.jsonl`);
       try {
         const stat = fs.statSync(jsonlPath);
-        // If JSONL was modified in the last 5 seconds, Claude is working
-        return (Date.now() - stat.mtimeMs) < 5000;
+        if (stat.size === 0) continue;
+
+        // Agent dispatches can produce 50-200KB+ JSONL lines (full prompts).
+        // Progressively read larger chunks until we can parse the last line.
+        for (let readSize = 65536; readSize <= stat.size; readSize *= 4) {
+          const actualSize = Math.min(stat.size, readSize);
+          const fd = fs.openSync(jsonlPath, 'r');
+          const buf = Buffer.alloc(actualSize);
+          fs.readSync(fd, buf, 0, actualSize, stat.size - actualSize);
+          fs.closeSync(fd);
+
+          const text = buf.toString('utf8');
+          const trimmed = text.trimEnd();
+          const lastNl = trimmed.lastIndexOf('\n');
+          const lastLine = lastNl >= 0 ? trimmed.substring(lastNl + 1) : trimmed;
+
+          if (!lastLine) continue;
+          try {
+            return { entry: JSON.parse(lastLine), mtimeMs: stat.mtimeMs };
+          } catch {
+            if (actualSize >= stat.size) {
+              // Full file read but last line won't parse — could be a write in progress.
+              // If file was modified recently, Claude is actively writing → treat as active.
+              const age = Date.now() - stat.mtimeMs;
+              if (age < 5000) {
+                return { entry: { type: '_write_in_progress' }, mtimeMs: stat.mtimeMs };
+              }
+              // Stale file with corrupt last line — scan backwards for last valid entry
+              const lines = text.split('\n').filter(l => l.trim());
+              for (let i = lines.length - 1; i >= 0; i--) {
+                try { return { entry: JSON.parse(lines[i]), mtimeMs: stat.mtimeMs }; }
+                catch { continue; }
+              }
+              break;
+            }
+            // Buffer started mid-line — try larger buffer
+            continue;
+          }
+        }
       } catch { /* file not found */ }
     }
+    return null;
+  }
+
+  _isInstanceActive(inst) {
+    const result = this._getLastJsonlEntry(inst);
+    if (!result) return false;
+
+    const { entry, mtimeMs } = result;
+
+    // Staleness guard: if the JSONL file hasn't been modified in 2+ minutes,
+    // Claude has stalled or the user walked away — always idle.
+    // (Tool calls and subagents can run for minutes, but they still produce
+    // periodic writes; 2 minutes of silence means nothing is happening.)
+    const fileAge = Date.now() - mtimeMs;
+    if (fileAge > 120000) return false;
+
+    // Whitelist approach: only specific entry types mean Claude is actively working.
+    // Everything else (system entries, file-history-snapshot, completed responses,
+    // unknown types) is treated as idle. This prevents false "working" status
+    // from bookkeeping entries, snapshots, or unrecognized types.
+
+    // 1. Write in progress — actively writing to JSONL
+    if (entry.type === '_write_in_progress') return true;
+
+    // 2. User message (real prompt or tool result) — Claude is processing
+    if (entry.type === 'user') return true;
+
+    // 3. Assistant response — check stop_reason:
+    //    - tool_use: a tool is executing
+    //    - null/undefined: Claude is mid-stream (still generating)
+    //    - end_turn/max_tokens/stop_sequence: finished (fall through to idle)
+    if (entry.type === 'assistant') {
+      const stopReason = entry.message?.stop_reason;
+      if (stopReason === 'tool_use' || stopReason == null) return true;
+    }
+
+    // 4. Progress updates from subagents — subagent is running
+    if (entry.type === 'progress') return true;
+
+    // 5. Queue operations — task notifications being processed
+    if (entry.type === 'queue-operation') return true;
+
+    // Everything else is idle:
+    // - assistant with end_turn (finished responding)
+    // - assistant with max_tokens (hit token limit, stopped)
+    // - assistant with stop_sequence (stopped at sequence)
+    // - assistant with no/unknown stop_reason
+    // - system (any subtype: turn_duration, init, summary, etc.)
+    // - file-history-snapshot (bookkeeping)
+    // - result (tool output, if Claude hasn't started processing it)
+    // - unknown/unrecognized entry types
     return false;
   }
 
@@ -112,15 +205,17 @@ class ClaudeWatcher extends EventEmitter {
               existing.etime = etime;
               existing.lastSeen = now;
 
-              // Primary signal: JSONL mtime (immune to typing spikes and sleep)
-              // Secondary signal: sustained CPU > 5% (requires 2+ consecutive high readings)
-              const jsonlActive = this._isJsonlActive(existing);
-              const cpuHigh = cpu > 5;
-              const prevCpuHigh = (existing._prevCpuHigh || false);
-              existing._prevCpuHigh = cpuHigh;
-              const cpuSustained = cpuHigh && prevCpuHigh;
+              // Quick session-file check: detect /clear or session change within 2s
+              const sessionInfo = this._readSessionFile(pid);
+              if (sessionInfo?.sessionId && sessionInfo.sessionId !== existing.sessionId) {
+                existing.sessionId = sessionInfo.sessionId;
+              }
+              if (sessionInfo?.cwd) {
+                existing._sessionCwd = sessionInfo.cwd;
+              }
 
-              const isActive = jsonlActive || cpuSustained;
+              // Ground truth: read Claude's state from the last JSONL entry
+              const isActive = this._isInstanceActive(existing);
               const wasActive = existing.active;
               existing.active = isActive;
 
@@ -167,10 +262,9 @@ class ClaudeWatcher extends EventEmitter {
     // Detect terminal app (async, cached once)
     const terminalApp = await this._detectTerminalApp(pid);
 
-    // Determine initial active state using JSONL mtime
-    const initInst = { sessionId: sessionInfo?.sessionId, cwd: cwd || 'unknown' };
-    const jsonlActive = this._isJsonlActive(initInst);
-    const initiallyActive = jsonlActive || isActive;
+    // Determine initial active state from Claude's JSONL state
+    const initInst = { sessionId: sessionInfo?.sessionId, cwd: cwd || 'unknown', _sessionCwd: sessionInfo?.cwd };
+    const initiallyActive = this._isInstanceActive(initInst);
 
     this.instances.set(pid, {
       pid, tty, cpu, mem, rss,
@@ -181,7 +275,7 @@ class ClaudeWatcher extends EventEmitter {
       idleStart: initiallyActive ? null : now,
       lastSeen: now,
       _terminalApp: terminalApp,
-      _prevCpuHigh: cpu > 5,
+      _sessionCwd: sessionInfo?.cwd || null,
       // Session metadata
       sessionId: sessionInfo?.sessionId || null,
       startedAt: sessionInfo?.startedAt || null,
@@ -311,12 +405,22 @@ class ClaudeWatcher extends EventEmitter {
     // Re-read session file to detect /clear (new sessionId, same pid)
     const sessionInfo = this._readSessionFile(pid);
     if (sessionInfo?.sessionId && sessionInfo.sessionId !== inst.sessionId) {
+      // Session changed — zero out stats immediately so stale data doesn't linger
       inst.sessionId = sessionInfo.sessionId;
+      inst.turnCount = 0;
+      inst.inputTokens = 0;
+      inst.outputTokens = 0;
+      inst.cacheReadTokens = 0;
+      inst.cacheCreateTokens = 0;
+      inst.contextTokens = 0;
+      inst.model = null;
+      inst.gitBranch = null;
     }
     // Also refresh cwd from session file (more reliable than stale lsof)
     if (sessionInfo?.cwd) {
       inst.cwd = sessionInfo.cwd;
       inst.project = sessionInfo.cwd.split('/').pop();
+      inst._sessionCwd = sessionInfo.cwd;
     }
     // Pass both cwds for robust JSONL lookup (same as _initInstance)
     const stats = await this._getSessionStats(inst.sessionId, inst.cwd, sessionInfo?.cwd);
@@ -367,7 +471,7 @@ class ClaudeWatcher extends EventEmitter {
     let totalActive = 0;
     for (const [, inst] of this.instances) {
       // Strip private fields from snapshot sent to renderer
-      const { _terminalApp, _prevCpuHigh, ...publicInst } = inst;
+      const { _terminalApp, _sessionCwd, ...publicInst } = inst;
       instances.push(publicInst);
       if (inst.active) totalActive++;
     }

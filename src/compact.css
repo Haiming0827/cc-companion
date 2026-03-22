@@ -17,8 +17,8 @@ html, body { background: transparent; overflow: hidden; user-select: none; }
   --btn-bg-hover: rgba(255,255,255,0.15);
   --tile-active-bg: linear-gradient(135deg, rgba(232,89,12,0.25) 0%, rgba(232,89,12,0.12) 100%);
   --tile-active-border: rgba(232,89,12,0.25);
-  --tile-idle-bg: linear-gradient(135deg, rgba(76,175,125,0.2) 0%, rgba(76,175,125,0.08) 100%);
-  --tile-idle-border: rgba(76,175,125,0.2);
+  --tile-idle-bg: linear-gradient(135deg, rgba(56,165,110,0.25) 0%, rgba(56,165,110,0.10) 100%);
+  --tile-idle-border: rgba(56,165,110,0.25);
   --selected-outline: rgba(255,255,255,0.5);
   --scroll-thumb: rgba(255,255,255,0.15);
   --scroll-thumb-hover: rgba(255,255,255,0.25);
@@ -38,8 +38,8 @@ html, body { background: transparent; overflow: hidden; user-select: none; }
   --btn-bg-hover: rgba(0,0,0,0.12);
   --tile-active-bg: linear-gradient(135deg, rgba(232,89,12,0.15) 0%, rgba(232,89,12,0.06) 100%);
   --tile-active-border: rgba(232,89,12,0.2);
-  --tile-idle-bg: linear-gradient(135deg, rgba(76,175,125,0.12) 0%, rgba(76,175,125,0.05) 100%);
-  --tile-idle-border: rgba(76,175,125,0.15);
+  --tile-idle-bg: linear-gradient(135deg, rgba(56,155,105,0.22) 0%, rgba(56,155,105,0.10) 100%);
+  --tile-idle-border: rgba(56,155,105,0.28);
   --selected-outline: rgba(0,0,0,0.3);
   --scroll-thumb: rgba(0,0,0,0.12);
   --scroll-thumb-hover: rgba(0,0,0,0.2);
