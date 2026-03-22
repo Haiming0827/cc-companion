@@ -123,7 +123,10 @@ class ClaudeWatcher extends EventEmitter {
 
   _isInstanceActive(inst) {
     const result = this._getLastJsonlEntry(inst);
-    if (!result) return false;
+
+    // No JSONL found — process may be brand new or session file not yet written.
+    // Fall back to CPU: if the process is burning CPU, it's likely initializing.
+    if (!result) return (inst.cpu || 0) >= 5;
 
     const { entry, mtimeMs } = result;
 
@@ -135,7 +138,7 @@ class ClaudeWatcher extends EventEmitter {
     if (fileAge > 120000) {
       // CPU fallback: if the process is using significant CPU, it's still working
       // even though the JSONL is stale (e.g. long tool execution).
-      if (inst.cpu >= 5) return true;
+      if ((inst.cpu || 0) >= 5) return true;
       return false;
     }
 
@@ -165,14 +168,18 @@ class ClaudeWatcher extends EventEmitter {
     // 5. Queue operations — task notifications being processed
     if (entry.type === 'queue-operation') return true;
 
+    // 6. Result entry — a tool just returned output; Claude is about to process it.
+    //    Only active if the file was very recently modified (within 30s), since
+    //    result entries are immediately followed by Claude processing them.
+    if (entry.type === 'result' && fileAge < 30000) return true;
+
     // Everything else is idle:
     // - assistant with end_turn (finished responding)
     // - assistant with max_tokens (hit token limit, stopped)
     // - assistant with stop_sequence (stopped at sequence)
-    // - assistant with no/unknown stop_reason
     // - system (any subtype: turn_duration, init, summary, etc.)
     // - file-history-snapshot (bookkeeping)
-    // - result (tool output, if Claude hasn't started processing it)
+    // - stale result entries (>30s, tool returned but Claude didn't pick it up)
     // - unknown/unrecognized entry types
     return false;
   }

@@ -152,7 +152,15 @@ The watcher polls `ps` every 2 seconds to find Claude processes (case-insensitiv
 ```
 ps -eo pid,tty,%cpu,%mem,rss,etime,command | grep -i claude
 ```
-It resolves each process's working directory via `lsof -d cwd` to get the project name. CPU > 3% = actively working; below that = idle. State transitions (active → idle, idle → active) are timestamped for duration tracking.
+It resolves each process's working directory via `lsof -d cwd` to get the project name.
+
+**Activity detection** uses a multi-signal approach:
+
+1. **JSONL state (primary)** — reads the last entry from Claude's session JSONL to determine ground truth. Active entry types: `user` (processing prompt), `assistant` with `tool_use`/null stop reason (mid-stream or tool executing), `progress` (subagent running), `queue-operation`, `result` (tool just returned, within 30s).
+2. **Staleness guard** — if the JSONL hasn't been modified in 2+ minutes, falls through to the CPU fallback (long-running tools like builds or browser sessions can go minutes without writes).
+3. **CPU fallback** — if CPU >= 5%, the instance is treated as active even when the JSONL is stale or missing (e.g. brand new process still initializing, or long tool execution).
+
+State transitions (active → idle, idle → active) are timestamped for duration tracking.
 
 ### Session Analytics
 For each detected instance, the watcher reads:
