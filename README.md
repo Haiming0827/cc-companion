@@ -39,20 +39,7 @@ Click the `ⓘ` button on any tile to view detailed stats:
 - **Quit** (✕) — exit the app
 - **Tooltips** — hover any button to see its function
 
-## Download
-
-Grab the latest release from the [Releases](../../releases) page:
-
-| Platform | File |
-|----------|------|
-| macOS (Apple Silicon) | `CC Companion-x.x.x-arm64.dmg` |
-| macOS (Intel) | `CC Companion-x.x.x.dmg` |
-
-Open the `.dmg`, drag CC Companion to your Applications folder, and launch it. That's it.
-
-> **Note:** Since the app isn't signed with an Apple Developer certificate, macOS may block it on first launch. Right-click the app > Open > Open to bypass Gatekeeper.
-
-## Run from Source
+## Getting Started
 
 ```bash
 git clone https://github.com/jiahongc/cc-companion.git
