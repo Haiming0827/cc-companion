@@ -76,7 +76,11 @@ Grab the latest DMG from the [Releases](https://github.com/jiahongc/cc-companion
 
 Open the `.dmg`, drag CC Companion to Applications, and launch.
 
-> **Note:** macOS may block it on first launch since it's unsigned. Right-click the app > Open > Open to bypass Gatekeeper.
+> **Note:** The app is unsigned. macOS may show "CC Companion is damaged and can't be opened." This is a false alarm — it's just Gatekeeper blocking unsigned apps. After dragging to Applications, run:
+> ```
+> xattr -cr /Applications/CC\ Companion.app
+> ```
+> Then open it normally.
 
 ## Run from Source
 
@@ -175,7 +179,7 @@ Output goes to the `dist/` folder.
 - **Read-only** — The app only reads Claude Code's session files (`~/.claude/sessions/`, `~/.claude/projects/`). It never writes to them or modifies your Claude sessions in any way.
 - **No secrets** — The app does not access, store, or transmit API keys, tokens, or credentials. It reads process metadata (`ps`) and session JSONL files, which contain conversation structure but not your API keys.
 - **Process isolation** — Electron runs with `contextIsolation: true` and `nodeIntegration: false`. The renderer communicates with the main process only through a restricted preload API.
-- **Unsigned binary** — The DMG is not signed with an Apple Developer certificate. macOS Gatekeeper will block it on first launch — right-click > Open > Open to bypass. You can also build from source to verify the code yourself.
+- **Unsigned binary** — The DMG is not signed with an Apple Developer certificate. macOS will show a "damaged" error on first launch — run `xattr -cr /Applications/CC\ Companion.app` to clear the quarantine flag. You can also build from source to verify the code yourself.
 
 ## Contributing
 
