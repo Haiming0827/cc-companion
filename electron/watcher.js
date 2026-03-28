@@ -196,27 +196,40 @@ class ClaudeWatcher extends EventEmitter {
   }
 
   check() {
+    // Note: exec with hardcoded command string (no user input) — safe from injection.
     exec(
-      "ps -eo pid,tty,%cpu,%mem,rss,etime,command | grep -i '^[[:space:]]*[0-9].*claude' | grep -v grep | grep -v cc-companion | grep -v Electron | grep -v '/bin/' | grep -v 'Claude.app' | grep -v 'Claude Helper'",
+      "ps -eo pid,ppid,tty,%cpu,%mem,rss,etime,command | grep -i '^[[:space:]]*[0-9].*claude' | grep -v grep | grep -v cc-companion | grep -v Electron | grep -v '/bin/' | grep -v 'Claude.app' | grep -v 'Claude Helper'",
       (err, stdout) => {
         const now = Date.now();
         const seenPids = new Set();
         let hasNewInstances = false;
 
+        // First pass: collect all Claude PIDs so we can filter out subagents
+        const allClaudePids = new Set();
+        const parsedLines = [];
         if (stdout && stdout.trim()) {
           const lines = stdout.trim().split('\n');
           for (const line of lines) {
             const parts = line.trim().split(/\s+/);
-            if (parts.length < 5) continue;
-
+            if (parts.length < 6) continue;
             const pid = parseInt(parts[0]);
-            const tty = parts[1];
-            const cpu = parseFloat(parts[2]);
-            const mem = parseFloat(parts[3]);
-            const rss = parseInt(parts[4]);
-            const etime = parts[5];
+            const ppid = parseInt(parts[1]);
+            allClaudePids.add(pid);
+            parsedLines.push({ pid, ppid, parts });
+          }
+        }
+
+        for (const { pid, ppid, parts } of parsedLines) {
+            const tty = parts[2];
+            const cpu = parseFloat(parts[3]);
+            const mem = parseFloat(parts[4]);
+            const rss = parseInt(parts[5]);
+            const etime = parts[6];
 
             if (tty === '??' || tty === '?') continue;
+
+            // Skip subagent processes (parent is another Claude instance)
+            if (allClaudePids.has(ppid)) continue;
 
             seenPids.add(pid);
             const existing = this.instances.get(pid);
@@ -294,7 +307,6 @@ class ClaudeWatcher extends EventEmitter {
               this._initInstance(pid, tty, cpu, mem, rss, etime, false, now);
             }
           }
-        }
 
         // Remove instances that disappeared (but not ones still initializing)
         for (const [pid] of this.instances) {
