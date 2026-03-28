@@ -103,7 +103,7 @@ app.whenReady().then(() => {
 
     let script;
     if (appName === 'Terminal' && tty) {
-      // Terminal.app: match tab by tty, select it, raise the window
+      // Terminal.app: match tab by tty, unminimize if needed, select it, raise the window
       script = `
         tell application "Terminal"
           activate
@@ -112,6 +112,7 @@ app.whenReady().then(() => {
             repeat with t in tabs of w
               if tty of t is "${tty}" then
                 set selected of t to true
+                set miniaturized of w to false
                 set index of w to 1
                 set matched to true
                 exit repeat
@@ -122,7 +123,7 @@ app.whenReady().then(() => {
         end tell
       `;
     } else if (appName === 'iTerm2' && tty) {
-      // iTerm2: match session by tty, select its tab, raise the window
+      // iTerm2: match session by tty, unminimize if needed, select its tab, raise the window
       script = `
         tell application "iTerm2"
           activate
@@ -133,6 +134,7 @@ app.whenReady().then(() => {
                 if tty of s is "${tty}" then
                   select t
                   select s
+                  set miniaturized of w to false
                   set index of w to 1
                   set matched to true
                   exit repeat

@@ -304,6 +304,8 @@ function animateTileSwap(oldPositions) {
 }
 
 document.addEventListener('mousedown', (e) => {
+  // Don't start tile drag/click if clicking the info button
+  if (e.target.closest('.ci-info-btn')) return;
   const tile = e.target.closest('.ci-tile');
   if (tile) {
     tileDrag = {
