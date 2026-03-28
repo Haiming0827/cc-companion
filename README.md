@@ -1,8 +1,33 @@
 # CC Companion
 
+<p align="center">
+  <img src="assets/screenshots/icon.png" alt="CC Companion Icon" width="80">
+</p>
+
 A desktop companion app that monitors your Claude Code sessions in real time. Built with Electron.
 
 CC Companion is a Dynamic Island-style always-on-top bar that sits at the top of your screen, tracking every Claude Code instance running on your machine — which project it's in, whether it's actively working or idle, CPU and memory usage, token consumption, conversation turns, and how long it's been in each state.
+
+<table>
+  <tr>
+    <td><img src="assets/screenshots/light-mode.png" alt="Light mode" width="300"></td>
+    <td><img src="assets/screenshots/light-working.png" alt="Light mode working" width="300"></td>
+    <td><img src="assets/screenshots/settings-dark.png" alt="Settings panel" width="300"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Light mode</em></td>
+    <td align="center"><em>Working state</em></td>
+    <td align="center"><em>Settings + detail</em></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="assets/screenshots/detail-dark.png" alt="Dark mode detail" width="600"></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><em>Dark mode with detail panel</em></td>
+    <td></td>
+  </tr>
+</table>
 
 ## Features
 
