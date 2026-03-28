@@ -39,7 +39,15 @@ Click the `ⓘ` button on any tile to view detailed stats:
 - **Quit** (✕) — exit the app
 - **Tooltips** — hover any button to see its function
 
-## Getting Started
+## Download
+
+Grab the latest DMG from the [Releases](https://github.com/jiahongc/cc-companion/releases) page.
+
+Open the `.dmg`, drag CC Companion to Applications, and launch.
+
+> **Note:** macOS may block it on first launch since it's unsigned. Right-click the app > Open > Open to bypass Gatekeeper.
+
+## Run from Source
 
 ```bash
 git clone https://github.com/jiahongc/cc-companion.git
