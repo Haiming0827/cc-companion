@@ -8,7 +8,11 @@ A desktop companion app that monitors your Claude Code sessions in real time. Bu
 
 CC Companion is a Dynamic Island-style always-on-top bar that sits at the top of your screen, tracking every Claude Code instance running on your machine — which project it's in, whether it's actively working or idle, CPU and memory usage, token consumption, conversation turns, and how long it's been in each state.
 
+<div align="center">
+
 https://github.com/user-attachments/assets/df42aecd-d983-4839-9bad-8368281be0e0
+
+</div>
 
 <table>
   <tr>
