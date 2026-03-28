@@ -48,8 +48,8 @@ html, body { background: transparent; overflow: hidden; user-select: none; }
 .compact-bar {
   display: flex;
   flex-direction: column;
-  width: 420px;
-  padding: 10px 14px;
+  width: 440px;
+  padding: 10px 16px;
   background: var(--bar-bg);
   border-radius: 18px;
   gap: 6px;
@@ -132,21 +132,63 @@ html, body { background: transparent; overflow: hidden; user-select: none; }
   border-color: var(--border-hover);
   background: var(--hover-bg);
 }
+.snap-btn.toggled-off {
+  opacity: 0.4;
+}
+
+/* Tooltips */
+.has-tooltip {
+  position: relative;
+}
+.tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--btn-bg-hover);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+.tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-bottom-color: var(--border-subtle);
+}
+.has-tooltip:hover .tooltip {
+  opacity: 1;
+}
 
 /* no-drag utility */
 .no-drag { -webkit-app-region: no-drag; }
 
-/* Instance grid — 2-column, scrollable only when 5+ instances */
+/* Instance grid — 2-column, max 3 rows visible (6 tiles), scroll beyond that */
 .compact-instances {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 5px;
+  padding: 3px;
   cursor: pointer;
   overflow: hidden;
 }
 .compact-instances.scrollable {
-  max-height: 135px;
-  overflow-y: auto;
+  /* 3 rows of ~55px tiles + 2 gaps of 5px = ~175px */
+  max-height: 175px;
+  overflow-y: scroll;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--scroll-thumb) transparent;

@@ -20,6 +20,7 @@ class ClaudeWatcher extends EventEmitter {
   constructor() {
     super();
     this.instances = new Map(); // pid -> instance info
+    this._initializingPids = new Set(); // PIDs currently being async-initialized
     this.pollInterval = null;
     this._lastSnapshotJSON = null; // for change detection
   }
@@ -196,7 +197,7 @@ class ClaudeWatcher extends EventEmitter {
 
   check() {
     exec(
-      "ps -eo pid,tty,%cpu,%mem,rss,etime,command | grep -i '^[[:space:]]*[0-9].*claude' | grep -v grep | grep -v cc-companion | grep -v Electron | grep -v '/bin/'",
+      "ps -eo pid,tty,%cpu,%mem,rss,etime,command | grep -i '^[[:space:]]*[0-9].*claude' | grep -v grep | grep -v cc-companion | grep -v Electron | grep -v '/bin/' | grep -v 'Claude.app' | grep -v 'Claude Helper'",
       (err, stdout) => {
         const now = Date.now();
         const seenPids = new Set();
@@ -230,7 +231,18 @@ class ClaudeWatcher extends EventEmitter {
               // Quick session-file check: detect /clear or session change within 2s
               const sessionInfo = this._readSessionFile(pid);
               if (sessionInfo?.sessionId && sessionInfo.sessionId !== existing.sessionId) {
+                // Session changed (/clear or new session) — zero stats immediately
                 existing.sessionId = sessionInfo.sessionId;
+                existing.startedAt = sessionInfo.startedAt || null;
+                existing.turnCount = 0;
+                existing.inputTokens = 0;
+                existing.outputTokens = 0;
+                existing.cacheReadTokens = 0;
+                existing.cacheCreateTokens = 0;
+                existing.contextTokens = 0;
+                existing.model = null;
+                existing.gitBranch = null;
+                existing._lastActiveTurn = 0;
               }
               if (sessionInfo?.cwd) {
                 existing._sessionCwd = sessionInfo.cwd;
@@ -239,29 +251,54 @@ class ClaudeWatcher extends EventEmitter {
               // Ground truth: read Claude's state from the last JSONL entry
               const isActive = this._isInstanceActive(existing);
               const wasActive = existing.active;
-              existing.active = isActive;
 
-              if (isActive && !wasActive) {
-                // Resuming after a short gap (< 30s, e.g. sleep/wake)? Keep old timer
-                const gap = existing.idleStart ? (now - existing.idleStart) : Infinity;
-                if (!existing.activeStart || gap > 30000) {
-                  existing.activeStart = now;
+              if (isActive) {
+                // Reset idle grace period since we're active
+                existing._graceStart = null;
+
+                if (!wasActive) {
+                  // Transitioning idle → active
+                  // Reset timer if the turn count increased (new user prompt)
+                  // or if the idle gap was long enough for a distinct session
+                  const gap = existing.idleStart ? (now - existing.idleStart) : Infinity;
+                  const turnChanged = existing._lastActiveTurn != null && existing.turnCount > existing._lastActiveTurn;
+                  if (!existing.activeStart || gap > 30000 || turnChanged) {
+                    existing.activeStart = now;
+                  }
+                  existing.idleStart = null;
                 }
-                existing.idleStart = null;
-              } else if (!isActive && wasActive) {
-                existing.idleStart = now;
-                // Don't clear activeStart — preserve it for resume detection
+                existing.active = true;
+                existing._lastActiveTurn = existing.turnCount;
+              } else {
+                // JSONL says idle — apply grace period to prevent flickering
+                if (wasActive) {
+                  if (!existing._graceStart) {
+                    // First idle poll — start grace period, stay "active" for now
+                    existing._graceStart = now;
+                    // Don't change active state yet
+                  } else if (now - existing._graceStart >= 3000) {
+                    // Idle for 3+ seconds — actually transition to idle
+                    existing.active = false;
+                    existing.idleStart = now;
+                    existing._graceStart = null;
+                  }
+                  // If < 3s, keep existing.active = true (grace period)
+                } else {
+                  existing.active = false;
+                  existing._graceStart = null;
+                }
               }
-            } else {
+            } else if (!this._initializingPids.has(pid)) {
               hasNewInstances = true;
+              this._initializingPids.add(pid);
               this._initInstance(pid, tty, cpu, mem, rss, etime, false, now);
             }
           }
         }
 
-        // Remove instances that disappeared
+        // Remove instances that disappeared (but not ones still initializing)
         for (const [pid] of this.instances) {
-          if (!seenPids.has(pid)) {
+          if (!seenPids.has(pid) && !this._initializingPids.has(pid)) {
             this.instances.delete(pid);
           }
         }
@@ -275,6 +312,7 @@ class ClaudeWatcher extends EventEmitter {
   }
 
   async _initInstance(pid, tty, cpu, mem, rss, etime, isActive, now) {
+    try {
     const cwd = await this.getCwd(pid);
     const projectName = cwd ? cwd.split('/').pop() : `session-${pid}`;
     const sessionInfo = this._readSessionFile(pid);
@@ -295,6 +333,8 @@ class ClaudeWatcher extends EventEmitter {
       discoveredAt: now,
       activeStart: initiallyActive ? now : null,
       idleStart: initiallyActive ? null : now,
+      _graceStart: null,
+      _lastActiveTurn: sessionStats?.turnCount || 0,
       lastSeen: now,
       _terminalApp: terminalApp,
       _sessionCwd: sessionInfo?.cwd || null,
@@ -312,6 +352,9 @@ class ClaudeWatcher extends EventEmitter {
       gitBranch: sessionStats?.gitBranch || null,
     });
     this.emitIfChanged();
+    } finally {
+      this._initializingPids.delete(pid);
+    }
   }
 
   // Read ~/.claude/sessions/{pid}.json for session metadata
@@ -429,6 +472,7 @@ class ClaudeWatcher extends EventEmitter {
     if (sessionInfo?.sessionId && sessionInfo.sessionId !== inst.sessionId) {
       // Session changed — zero out stats immediately so stale data doesn't linger
       inst.sessionId = sessionInfo.sessionId;
+      inst.startedAt = sessionInfo.startedAt || null;
       inst.turnCount = 0;
       inst.inputTokens = 0;
       inst.outputTokens = 0;
@@ -437,6 +481,7 @@ class ClaudeWatcher extends EventEmitter {
       inst.contextTokens = 0;
       inst.model = null;
       inst.gitBranch = null;
+      inst._lastActiveTurn = 0;
     }
     // Also refresh cwd from session file (more reliable than stale lsof)
     if (sessionInfo?.cwd) {
@@ -460,7 +505,7 @@ class ClaudeWatcher extends EventEmitter {
 
   emitIfChanged() {
     const snapshot = this.getSnapshot();
-    const key = JSON.stringify(snapshot.instances.map(i => [i.pid, i.active, i.cpu.toFixed(0), i.rss, i.turnCount, i.outputTokens, i.contextTokens, i.model, i.gitBranch]));
+    const key = JSON.stringify(snapshot.instances.map(i => [i.pid, i.active, i.cpu.toFixed(0), i.rss, i.turnCount, i.outputTokens, i.contextTokens, i.model, i.gitBranch, i.activeStart]));
     if (key !== this._lastSnapshotJSON) {
       this._lastSnapshotJSON = key;
       this.emit('instance-update', snapshot);
@@ -493,7 +538,7 @@ class ClaudeWatcher extends EventEmitter {
     let totalActive = 0;
     for (const [, inst] of this.instances) {
       // Strip private fields from snapshot sent to renderer
-      const { _terminalApp, _sessionCwd, ...publicInst } = inst;
+      const { _terminalApp, _sessionCwd, _graceStart, _lastActiveTurn, ...publicInst } = inst;
       instances.push(publicInst);
       if (inst.active) totalActive++;
     }
@@ -507,6 +552,7 @@ class ClaudeWatcher extends EventEmitter {
 
   resetStats() {
     this.instances.clear();
+    this._initializingPids.clear();
     this._lastSnapshotJSON = null;
     this.emit('instance-update', this.getSnapshot());
   }

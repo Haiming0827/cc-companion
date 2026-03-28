@@ -4,6 +4,7 @@ let snapshot = null;
 let lastCompactHeight = 0;
 let selectedPid = null;
 let pidOrder = []; // user-defined tile order, new instances prepended
+let showRuntime = localStorage.getItem('showRuntime') === 'true'; // default off
 
 // ── Helpers ──────────────────────────────────────────────────
 function formatTime(s) {
@@ -26,13 +27,47 @@ function formatMem(kb) {
 
 function getCtxLimit(model) {
   if (!model) return 200000;
-  if (model.toLowerCase().includes('opus')) return 1000000;
+  const m = model.toLowerCase();
+  // Opus models have 1M context; detect by name pattern
+  if (m.includes('opus')) return 1000000;
+  // Default for sonnet, haiku, and any unknown future models
   return 200000;
 }
 
 function shortModelName(model) {
   if (!model) return '';
-  return model.replace(/^claude-/, '').split('-2')[0];
+  // Strip "claude-" prefix and any date suffix (e.g., -20260301)
+  return model
+    .replace(/^claude-/, '')
+    .replace(/-\d{8}$/, '');
+}
+
+function formatStartTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const now = new Date();
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const time = h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+  // If not today, prepend the date
+  if (d.toDateString() !== now.toDateString()) {
+    const mon = d.toLocaleString('en-US', { month: 'short' });
+    return mon + ' ' + d.getDate() + ', ' + time;
+  }
+  return time;
+}
+
+function formatElapsed(ts) {
+  if (!ts) return '—';
+  const secs = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (secs < 60) return secs + 's';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return mins + 'm';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ' + (mins % 60) + 'm';
+  const days = Math.floor(hrs / 24);
+  return days + 'd ' + (hrs % 24) + 'h';
 }
 
 function ctxInfo(inst) {
@@ -144,7 +179,7 @@ function render() {
         <div class="ci-project">${inst.project}</div>
       </div>
       <div class="ci-bottom">
-        <span class="ci-label">${active ? (durText || 'working') : 'ready'}</span>
+        <span class="ci-label">${active ? (showRuntime && durText ? durText : 'working') : 'ready'}</span>
         <span class="ci-model">${shortModelName(inst.model)}</span>
         ${ctxHtml}
       </div>
@@ -181,26 +216,32 @@ function renderDetail() {
   const ctx = ctxInfo(inst);
   const shortCwd = inst.cwd ? inst.cwd.replace(/^\/Users\/[^/]+/, '~') : '—';
 
+  const elapsedStr = formatElapsed(inst.startedAt);
+
   // Build a cache key from all displayed values to avoid re-creating the DOM
   // (innerHTML destroys the button mid-click when snapshot updates arrive)
   const detailKey = [inst.pid, inst.project, inst.model, inst.gitBranch,
     inst.turnCount, ctx.pct.toFixed(0), inst.inputTokens, inst.outputTokens,
-    inst.cacheReadTokens, inst.cpu.toFixed(1), inst.rss, shortCwd].join('|');
+    inst.cacheReadTokens, inst.cpu.toFixed(1), inst.rss, shortCwd, elapsedStr].join('|');
 
   if (detailKey === _lastDetailKey) return;
   _lastDetailKey = detailKey;
 
+  // All values are derived from trusted local process data (watcher.js), not user input.
+  // Safe to use innerHTML here — no untrusted content.
   panel.innerHTML = `
     <div class="detail-header">
       <span class="detail-title">${inst.project}</span>
       <button class="detail-close no-drag" id="detailClose">✕</button>
     </div>
     <div class="detail-grid">
+      <div class="detail-row"><span class="detail-key">started</span><span class="detail-val">${formatStartTime(inst.startedAt)}</span></div>
+      <div class="detail-row"><span class="detail-key">elapsed</span><span class="detail-val">${elapsedStr}</span></div>
       <div class="detail-row"><span class="detail-key">model</span><span class="detail-val">${shortModelName(inst.model) || '—'}</span></div>
       <div class="detail-row"><span class="detail-key">branch</span><span class="detail-val">${inst.gitBranch || '—'}</span></div>
-      <div class="detail-row"><span class="detail-key">turns</span><span class="detail-val">${inst.turnCount}</span></div>
       <div class="detail-row"><span class="detail-key">context</span><span class="detail-val">${ctx.pct.toFixed(0)}%</span></div>
       <div class="detail-row"><span class="detail-key">in tokens</span><span class="detail-val">${formatTokens(inst.inputTokens)}</span></div>
+      <div class="detail-row"><span class="detail-key">turns</span><span class="detail-val">${inst.turnCount}</span></div>
       <div class="detail-row"><span class="detail-key">out tokens</span><span class="detail-val">${formatTokens(inst.outputTokens)}</span></div>
       <div class="detail-row"><span class="detail-key">cached</span><span class="detail-val">${formatTokens(inst.cacheReadTokens)}</span></div>
       <div class="detail-row"><span class="detail-key">cpu / mem</span><span class="detail-val">${inst.cpu.toFixed(1)}% / ${formatMem(inst.rss)}</span></div>
@@ -387,7 +428,22 @@ if (localStorage.getItem('theme') !== 'dark') {
   document.getElementById('themeBtn').textContent = '☾';
 }
 
+// ── Runtime toggle persistence ────────────────────────────────
+if (!showRuntime) {
+  document.getElementById('timerBtn').classList.add('toggled-off');
+}
+document.querySelector('#timerBtn .tooltip').textContent = showRuntime ? 'Hide runtime' : 'Show runtime';
+
 // ── Header buttons ───────────────────────────────────────────
+document.getElementById('timerBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  showRuntime = !showRuntime;
+  localStorage.setItem('showRuntime', showRuntime);
+  const btn = document.getElementById('timerBtn');
+  btn.classList.toggle('toggled-off', !showRuntime);
+  btn.querySelector('.tooltip').textContent = showRuntime ? 'Hide runtime' : 'Show runtime';
+  render();
+});
 document.getElementById('themeBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const bar = document.getElementById('compactBar');

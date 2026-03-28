@@ -7,10 +7,13 @@ CC Companion sits alongside your workflow, tracking every Claude Code instance r
 ## Features
 
 ### Claude Code Instance Tracking
-- Auto-detects all running Claude Code processes (case-insensitive matching)
+- Auto-detects all running Claude Code processes (case-insensitive matching, filters out Claude desktop app)
 - Per-instance stats: project name, git branch, PID, CPU%, memory, uptime, working/idle duration
-- **Session analytics**: turn count, input/output token usage, model name — read directly from Claude's session files
-- Live working timer that ticks every second
+- **Session analytics**: turn count, input/output token usage, context usage, model name — read directly from Claude's session files
+- **Session timing**: start time (with date if not today) and total elapsed time shown in detail panel
+- Live working timer that ticks every second, with toggle to show/hide runtime
+- **Anti-flicker**: 3-second idle grace period prevents flickering between working/ready during brief pauses between tool calls
+- **Smart timer reset**: timer resets when a new user turn starts, so quick back-and-forth exchanges get fresh timers
 - Click any instance to focus its terminal window in Cursor
 
 ### Three Tabs
@@ -45,8 +48,14 @@ CC Companion sits alongside your workflow, tracking every Claude Code instance r
 - Countdown timer with visual feedback
 - Pause, resume, and restart controls
 
+### Dynamic Island Controls
+- **Runtime toggle** — show/hide the working timer on instance tiles (persisted across sessions)
+- **Theme toggle** — switch between light and dark mode
+- **Center window** — snap the island to center-top of screen
+- **Tooltips** — hover any button to see its function (theme-aware styling)
+
 ### Dark Mode
-- Full dark mode toggle via bottom bar button
+- Full dark mode toggle via bottom bar button and Dynamic Island
 - Custom dark theme for all components including feed cards and instance rows
 
 ## Download
@@ -148,11 +157,7 @@ cc-companion/
 ## How It Works
 
 ### Process Detection
-The watcher polls `ps` every 2 seconds to find Claude processes (case-insensitive):
-```
-ps -eo pid,tty,%cpu,%mem,rss,etime,command | grep -i claude
-```
-It resolves each process's working directory via `lsof -d cwd` to get the project name.
+The watcher polls `ps` every 2 seconds to find Claude CLI processes (case-insensitive), filtering out the Claude desktop app, helper processes, and Electron/system binaries. It resolves each process's working directory via `lsof -d cwd` to get the project name. Async instance initialization is guarded against duplicate creation during the discovery window.
 
 **Activity detection** uses a multi-signal approach with tiered staleness:
 
@@ -169,6 +174,10 @@ It resolves each process's working directory via `lsof -d cwd` to get the projec
 
 2. **CPU fallback** — beyond any staleness threshold, if CPU >= 5%, the instance is still treated as active. Also used when no JSONL file exists yet (brand new process).
 
+3. **Idle grace period** — when transitioning from active to idle, the watcher waits 3 seconds (2 consecutive polls) before confirming the transition. This prevents UI flickering during brief pauses between tool calls or multi-step responses.
+
+4. **Turn-aware timer reset** — the working timer resets when a new user turn is detected (turn count increases on idle→active transition), so quick exchanges get fresh timers instead of accumulating from the original session start.
+
 State transitions (active → idle, idle → active) are timestamped for duration tracking.
 
 ### Session Analytics
@@ -182,7 +191,7 @@ From the JSONL it extracts:
 - **Model** — which Claude model is active
 - **Git branch** — current branch name
 
-Stats refresh every 10 seconds. Only emits updates when data actually changes.
+Stats refresh every 5 seconds. Only emits updates when data actually changes (deduplicated via snapshot key).
 
 ### Feed Sources
 - **Reddit**: JSON API (`/r/{subreddit}/hot.json`) with User-Agent header. No auth required.

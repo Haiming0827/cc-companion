@@ -8,7 +8,7 @@ let watcher = null;
 
 function createCompactWindow() {
   const { width: screenW } = screen.getPrimaryDisplay().workAreaSize;
-  const compactW = 420;
+  const compactW = 440;
   const compactH = 180;
 
   compactWin = new BrowserWindow({
@@ -89,7 +89,7 @@ app.whenReady().then(() => {
   ipcMain.on('snap-compact-window', () => {
     if (!compactWin || compactWin.isDestroyed()) return;
     const { width: screenW } = screen.getPrimaryDisplay().workAreaSize;
-    const compactW = 420;
+    const compactW = 440;
     compactWin.setPosition(Math.floor((screenW - compactW) / 2), 0);
   });
 

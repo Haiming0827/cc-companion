@@ -425,8 +425,8 @@ function formatTokens(n) {
 function getContextLimit(model) {
   if (!model) return 200000;
   const m = model.toLowerCase();
-  if (m.includes('opus')) return 1000000;  // Opus 4.6 has 1M context
-  return 200000; // Sonnet, Haiku = 200k
+  if (m.includes('opus')) return 1000000;
+  return 200000;
 }
 
 function renderInstanceList() {
