@@ -6,7 +6,7 @@
 
 A desktop companion app that monitors your Claude Code sessions in real time. Built with Electron.
 
-CC Companion is a Dynamic Island-style always-on-top bar that sits at the top of your screen, tracking every Claude Code instance running on your machine — which project it's in, whether it's actively working or idle, CPU and memory usage, token consumption, conversation turns, and how long it's been in each state.
+CC Companion is a lightweight always-on-top window that sits at the top of your screen, tracking every Claude Code instance running on your machine — which project it's in, whether it's actively working or idle, CPU and memory usage, token consumption, conversation turns, and how long it's been in each state.
 
 <div align="center">
 
