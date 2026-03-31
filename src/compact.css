@@ -326,6 +326,47 @@ html, body { background: transparent; overflow: visible; user-select: none; }
   50%      { transform: translateY(-2px); }
 }
 
+/* Context menu */
+.context-menu {
+  position: fixed;
+  z-index: 100;
+  background: var(--bar-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  backdrop-filter: blur(12px);
+  min-width: 120px;
+}
+.context-item {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.context-item:hover {
+  background: var(--hover-bg);
+}
+
+/* Rename input */
+.rename-input {
+  background: none;
+  border: 1px solid var(--border-hover);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 4px;
+  width: 100%;
+  outline: none;
+  -webkit-app-region: no-drag;
+}
+
 /* Info button on tile bottom row */
 .ci-info-btn {
   background: none;

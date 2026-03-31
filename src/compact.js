@@ -6,6 +6,8 @@ let selectedPid = null;
 let pidOrder = []; // user-defined tile order, new instances prepended
 let showRuntime = localStorage.getItem('showRuntime') === 'true'; // default off
 let showIdleTime = localStorage.getItem('showIdleTime') === 'true'; // default off
+let customNames = {}; // pid -> name (session-only, not persisted — each instance is unique)
+let isRenaming = false; // block render() while editing a name
 
 // ── Helpers ──────────────────────────────────────────────────
 function formatTime(s) {
@@ -143,6 +145,7 @@ function resizeWindow() {
 
 // ── Render ───────────────────────────────────────────────────
 function render() {
+  if (isRenaming) return; // don't rebuild DOM while editing a name
   const summary = document.getElementById('compactSummary');
   const list = document.getElementById('compactInstances');
   const icon = document.getElementById('claudeIcon');
@@ -182,10 +185,12 @@ function render() {
       : '';
     const selClass = inst.pid === selectedPid ? ' selected' : '';
 
+    const displayName = customNames[inst.pid] || inst.project;
+
     return `<div class="ci-tile ${sc}${selClass}" data-pid="${inst.pid}">
       <div class="ci-top">
         <div class="ci-icon">${active ? WORKING_ICON : SLEEPING_ICON}</div>
-        <div class="ci-project">${inst.project}</div>
+        <div class="ci-project">${displayName}</div>
       </div>
       <div class="ci-bottom">
         <span class="ci-label">${active
@@ -304,8 +309,11 @@ function animateTileSwap(oldPositions) {
 }
 
 document.addEventListener('mousedown', (e) => {
-  // Don't start tile drag/click if clicking the info button
+  // Don't start tile drag/click for info button, right-click, rename input, or context menu
   if (e.target.closest('.ci-info-btn')) return;
+  if (e.target.closest('.rename-input')) return;
+  if (e.target.closest('.context-menu')) return;
+  if (e.button === 2) return; // right-click
   const tile = e.target.closest('.ci-tile');
   if (tile) {
     tileDrag = {
@@ -428,6 +436,88 @@ document.addEventListener('click', (e) => {
     return;
   }
 });
+
+// ── Right-click context menu for tiles ────────────────────────
+let contextMenu = null;
+
+document.addEventListener('contextmenu', (e) => {
+  const tile = e.target.closest('.ci-tile');
+  if (!tile) return;
+  e.preventDefault();
+  removeContextMenu();
+
+  const pid = tile.dataset.pid;
+  if (!pid) return;
+
+  contextMenu = document.createElement('div');
+  contextMenu.className = 'context-menu no-drag';
+  contextMenu.innerHTML = '<div class="context-item" data-action="rename">Rename</div><div class="context-item" data-action="reset-name">Reset name</div>';
+  contextMenu.style.left = e.clientX + 'px';
+  contextMenu.style.top = e.clientY + 'px';
+  document.body.appendChild(contextMenu);
+
+  contextMenu.addEventListener('click', (ce) => {
+    const action = ce.target.dataset.action;
+    if (action === 'rename') {
+      removeContextMenu();
+      startRename(tile, pid);
+    } else if (action === 'reset-name') {
+      delete customNames[pid];
+      removeContextMenu();
+      render();
+    }
+  });
+});
+
+function removeContextMenu() {
+  if (contextMenu) {
+    contextMenu.remove();
+    contextMenu = null;
+  }
+}
+
+// Close context menu on any click
+document.addEventListener('mousedown', (e) => {
+  if (contextMenu && !e.target.closest('.context-menu')) {
+    removeContextMenu();
+  }
+});
+
+function startRename(tile, pid) {
+  const projectEl = tile.querySelector('.ci-project');
+  if (!projectEl) return;
+
+  isRenaming = true;
+  const currentName = projectEl.textContent;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'rename-input no-drag';
+  input.value = currentName;
+
+  projectEl.textContent = '';
+  projectEl.appendChild(input);
+  input.focus();
+  input.select();
+
+  let finished = false;
+  const finish = () => {
+    if (finished) return; // prevent double-fire from Enter + blur
+    finished = true;
+    const newName = input.value.trim();
+    if (newName && newName !== currentName) {
+      customNames[pid] = newName;
+    }
+    isRenaming = false;
+    render();
+  };
+
+  input.addEventListener('keydown', (ke) => {
+    ke.stopPropagation();
+    if (ke.key === 'Enter') { ke.preventDefault(); finish(); }
+    if (ke.key === 'Escape') { isRenaming = false; render(); }
+  });
+  input.addEventListener('blur', finish);
+}
 
 // ── Window drag state ────────────────────────────────────────
 let windowDrag = false;
