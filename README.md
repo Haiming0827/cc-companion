@@ -26,11 +26,13 @@ https://github.com/user-attachments/assets/df42aecd-d983-4839-9bad-8368281be0e0
     <td align="center"><em>Settings + detail</em></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="assets/screenshots/detail-dark.png" alt="Dark mode detail" width="600"></td>
+    <td><img src="assets/screenshots/detail-dark.png" alt="Dark mode detail" width="300"></td>
+    <td><img src="assets/screenshots/session-history.png" alt="Session history" width="300"></td>
     <td></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><em>Dark mode with detail panel</em></td>
+    <td align="center"><em>Dark mode with detail panel</em></td>
+    <td align="center"><em>Session history</em></td>
     <td></td>
   </tr>
 </table>
