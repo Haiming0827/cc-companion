@@ -28,12 +28,15 @@ function formatMem(kb) {
   return kb + 'K';
 }
 
-function getCtxLimit(model) {
+function getCtxLimit(model, oneMBeta, contextTokens = 0) {
   if (!model) return 200000;
   const m = model.toLowerCase();
-  // Opus models have 1M context; detect by name pattern
-  if (m.includes('opus')) return 1000000;
-  // Default for sonnet, haiku, and any unknown future models
+  // Only opus-4-6/4-7 and sonnet-4-6 support the 1M-context beta.
+  const supports1M = /opus-4-[67]\b|sonnet-4-6\b/.test(m);
+  if (!supports1M) return 200000;
+  // Two signals for 1M: env var (shell or settings.json) OR observed context
+  // exceeding 200k (catches `/model [1m]` runtime toggle which isn't persisted).
+  if (oneMBeta || contextTokens > 200000) return 1000000;
   return 200000;
 }
 
@@ -74,7 +77,7 @@ function formatElapsed(ts) {
 }
 
 function ctxInfo(inst) {
-  const limit = getCtxLimit(inst.model);
+  const limit = getCtxLimit(inst.model, inst.oneMBeta, inst.contextTokens);
   const pct = inst.contextTokens > 0 ? Math.min(100, (inst.contextTokens / limit) * 100) : 0;
   const label = limit >= 1000000 ? '1M' : '200k';
   const cls = pct > 80 ? 'ci-ctx hot' : pct > 50 ? 'ci-ctx warm' : 'ci-ctx';

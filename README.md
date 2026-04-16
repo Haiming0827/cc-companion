@@ -116,7 +116,7 @@ cc-companion/
 │   ├── compact.css      # Dynamic Island styles
 │   └── compact.js       # Dynamic Island renderer
 ├── test/
-│   └── watcher.test.js  # 64 tests covering detection, state, tokens, formatting
+│   └── watcher.test.js  # 66 tests covering detection, state, tokens, formatting
 ├── assets/
 │   ├── icon_1024.png    # App icon (1024x1024 source)
 │   ├── icon.icns        # macOS app icon
@@ -156,11 +156,23 @@ For each detected instance, the watcher reads:
 - `~/.claude/projects/{project-key}/{session-id}.jsonl` — conversation log
 
 From the JSONL it extracts:
-- **Turn count** — real user prompts (excludes tool-use results)
+- **Turn count** — real user prompts (excludes tool-use results, auto-compact summaries, and meta/system-injected messages)
 - **Token usage** — input, output, cache read, cache creation tokens
 - **Context tokens** — current context window fill (input + cache read + cache creation from last entry)
-- **Model** — which Claude model is active
+- **Model** — which Claude model is active (Opus 4.7, Opus 4.6, Sonnet 4.6, Haiku 4.5, and earlier)
 - **Git branch** — current branch name
+
+### Context limit detection
+The context-usage bar denominator adapts to the model and whether the 1M-token beta is active:
+
+| Model | Default | With 1M beta |
+|---|---|---|
+| Opus 4.7, Opus 4.6, Sonnet 4.6 | 200k | 1M |
+| Opus 4.5 / 4.1 / 4, Sonnet 4.5 / 4, all Haiku | 200k | 200k (no beta support) |
+
+The 1M beta is detected from two signals:
+1. `CLAUDE_CODE_ENABLE_1M_CONTEXT=1` in the Claude process env (set via shell or `settings.json`'s `env` block) — sniffed once via `ps eww` at instance init.
+2. Observed context usage exceeding 200k — catches the `/model claude-opus-4-7[1m]` runtime toggle, which isn't persisted to env or disk.
 
 Stats refresh every 5 seconds. Only emits updates when data actually changes (deduplicated via snapshot key).
 
@@ -181,7 +193,7 @@ Clicking an instance tile brings the hosting terminal tab to the front. The best
 ## Testing
 
 ```bash
-npm test          # run all 64 tests
+npm test          # run all 66 tests
 npm run test:watch  # watch mode
 ```
 

@@ -422,10 +422,15 @@ function formatTokens(n) {
   return String(n);
 }
 
-function getContextLimit(model) {
+function getContextLimit(model, oneMBeta, contextTokens = 0) {
   if (!model) return 200000;
   const m = model.toLowerCase();
-  if (m.includes('opus')) return 1000000;
+  // Only opus-4-6/4-7 and sonnet-4-6 support the 1M-context beta.
+  const supports1M = /opus-4-[67]\b|sonnet-4-6\b/.test(m);
+  if (!supports1M) return 200000;
+  // Two signals for 1M: env var (shell or settings.json) OR observed context
+  // exceeding 200k (catches `/model [1m]` runtime toggle which isn't persisted).
+  if (oneMBeta || contextTokens > 200000) return 1000000;
   return 200000;
 }
 
@@ -447,7 +452,7 @@ function renderInstanceList() {
     if (inst.turnCount > 0) {
       const totalIn = inst.inputTokens + inst.cacheReadTokens + inst.cacheCreateTokens;
       // Context usage: contextTokens = last API call's total input (current window fill)
-      const contextLimit = getContextLimit(inst.model);
+      const contextLimit = getContextLimit(inst.model, inst.oneMBeta, inst.contextTokens);
       const ctxPct = inst.contextTokens > 0 ? Math.min(100, (inst.contextTokens / contextLimit) * 100) : 0;
       const ctxColor = ctxPct > 80 ? 'var(--acc)' : ctxPct > 50 ? '#e8a33e' : '#5ba8c8';
       const ctxBar = inst.contextTokens > 0

@@ -490,7 +490,7 @@ describe('ClaudeWatcher', () => {
       };
       for (const line of lines) {
         const entry = JSON.parse(line);
-        if (entry.type === 'user' && !entry.toolUseResult) stats.turnCount++;
+        if (entry.type === 'user' && !entry.toolUseResult && !entry.isCompactSummary && !entry.isMeta) stats.turnCount++;
         if (entry.type === 'assistant' && entry.message) {
           if (entry.message.model) stats.model = entry.message.model;
           if (entry.gitBranch) stats.gitBranch = entry.gitBranch;
@@ -515,6 +515,13 @@ describe('ClaudeWatcher', () => {
       expect(stats.model).toBe('claude-opus-4-6');
     });
 
+    it('captures claude-opus-4-7 model id', () => {
+      const stats = mockGetSessionStats(watcher, [
+        JSON.stringify({ type: 'assistant', message: { model: 'claude-opus-4-7', usage: { input_tokens: 100, output_tokens: 50 } } }),
+      ]);
+      expect(stats.model).toBe('claude-opus-4-7');
+    });
+
     it('accumulates tokens across model switches', () => {
       const stats = mockGetSessionStats(watcher, [
         JSON.stringify({ type: 'assistant', message: { model: 'claude-sonnet-4-6', usage: { input_tokens: 100, output_tokens: 50 } } }),
@@ -533,7 +540,7 @@ describe('ClaudeWatcher', () => {
       const stats = { turnCount: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreateTokens: 0, contextTokens: 0, model: null };
       for (const line of lines) {
         const entry = JSON.parse(line);
-        if (entry.type === 'user' && !entry.toolUseResult) stats.turnCount++;
+        if (entry.type === 'user' && !entry.toolUseResult && !entry.isCompactSummary && !entry.isMeta) stats.turnCount++;
         if (entry.type === 'assistant' && entry.message) {
           if (entry.message.model) stats.model = entry.message.model;
           const usage = entry.message.usage;
@@ -576,6 +583,16 @@ describe('ClaudeWatcher', () => {
         JSON.stringify({ type: 'assistant', message: {} }),
         JSON.stringify({ type: 'user', toolUseResult: true }),
         JSON.stringify({ type: 'assistant', message: {} }),
+        JSON.stringify({ type: 'user' }),
+      ]);
+      expect(stats.turnCount).toBe(2);
+    });
+
+    it('excludes compact summaries and meta messages from turn count', () => {
+      const stats = parseLines([
+        JSON.stringify({ type: 'user' }),
+        JSON.stringify({ type: 'user', isCompactSummary: true }),
+        JSON.stringify({ type: 'user', isMeta: true }),
         JSON.stringify({ type: 'user' }),
       ]);
       expect(stats.turnCount).toBe(2);

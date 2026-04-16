@@ -25,6 +25,16 @@ class ClaudeWatcher extends EventEmitter {
     this._lastSnapshotJSON = null; // for change detection
   }
 
+  async _detectOneMBeta(pid) {
+    // Mirror Claude Code's own logic: 1M context beta is enabled iff
+    // CLAUDE_CODE_ENABLE_1M_CONTEXT=1 is in the process env (set via shell
+    // or settings.json's `env` block, both of which land in process env).
+    try {
+      const { stdout } = await execAsync(`ps eww -o command= -p ${pid}`);
+      return /\bCLAUDE_CODE_ENABLE_1M_CONTEXT=1\b/.test(stdout);
+    } catch { return false; }
+  }
+
   async _detectTerminalApp(pid) {
     try {
       let currentPid = pid;
@@ -363,6 +373,8 @@ class ClaudeWatcher extends EventEmitter {
 
     // Detect terminal app (async, cached once)
     const terminalApp = await this._detectTerminalApp(pid);
+    // Detect 1M-context beta flag from process env (cached once per pid)
+    const oneMBeta = await this._detectOneMBeta(pid);
 
     // Determine initial active state from Claude's JSONL state
     const initInst = { sessionId: sessionInfo?.sessionId, cwd: cwd || 'unknown', _sessionCwd: sessionInfo?.cwd };
@@ -392,6 +404,7 @@ class ClaudeWatcher extends EventEmitter {
       contextTokens: sessionStats?.contextTokens || 0,
       model: sessionStats?.model || null,
       gitBranch: sessionStats?.gitBranch || null,
+      oneMBeta,
     });
     this.emitIfChanged();
     } finally {
@@ -495,8 +508,9 @@ class ClaudeWatcher extends EventEmitter {
       rl.on('line', (line) => {
         try {
           const entry = JSON.parse(line);
-          // Count turns: a "turn" is a real user prompt (not a tool-use result)
-          if (entry.type === 'user' && !entry.toolUseResult) {
+          // Count turns: a "turn" is a real user prompt, excluding tool-use
+          // results, auto-compact summaries, and meta/system-injected messages.
+          if (entry.type === 'user' && !entry.toolUseResult && !entry.isCompactSummary && !entry.isMeta) {
             stats.turnCount++;
           }
           if (entry.type === 'assistant' && entry.message) {
