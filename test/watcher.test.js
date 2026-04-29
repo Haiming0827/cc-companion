@@ -15,6 +15,7 @@ vi.mock('fs', async () => {
     readSync: vi.fn(),
     closeSync: vi.fn(),
     readFileSync: vi.fn(),
+    readlinkSync: vi.fn(),
     createReadStream: vi.fn(),
     promises: {
       access: vi.fn(),
@@ -25,6 +26,18 @@ vi.mock('fs', async () => {
 });
 vi.mock('readline', () => ({
   createInterface: vi.fn(),
+}));
+vi.mock('../electron/platform.js', () => ({
+  isMacos: false,
+  isLinux: true,
+  windowIconPath: '/mock/icon.png',
+  getCwd: vi.fn().mockResolvedValue('/Users/test/project'),
+  detectTerminalAppFromComm: vi.fn().mockReturnValue(null),
+  detectOneMBeta: vi.fn().mockResolvedValue(false),
+  activateApp: vi.fn().mockResolvedValue(undefined),
+  focusLinux: vi.fn().mockResolvedValue(undefined),
+  resumeSession: vi.fn().mockResolvedValue(undefined),
+  setWindowIcon: vi.fn(),
 }));
 
 const fs = await import('fs');

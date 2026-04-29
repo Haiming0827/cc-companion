@@ -244,7 +244,7 @@ function renderDetail() {
   panel.classList.add('visible');
 
   const ctx = ctxInfo(inst);
-  const shortCwd = inst.cwd ? inst.cwd.replace(/^\/Users\/[^/]+/, '~') : '—';
+  const shortCwd = inst.cwd ? inst.cwd.replace(/^\/(Users|home)\/[^/]+/, '~') : '—';
 
   const elapsedStr = formatElapsed(inst.startedAt);
 

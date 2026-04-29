@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "electron-builder",
-    "build:mac": "electron-builder --mac"
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
   },
   "dependencies": {
     "rss-parser": "^3.13.0"
@@ -26,6 +27,11 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "category": "Utility",
+      "target": ["AppImage", "deb"]
     },
     "files": [
       "electron/**/*",

@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const EventEmitter = require('events');
 const readline = require('readline');
+const platform = require('./platform');
 
 const execAsync = promisify(exec);
 
@@ -26,40 +27,22 @@ class ClaudeWatcher extends EventEmitter {
   }
 
   async _detectOneMBeta(pid) {
-    // Mirror Claude Code's own logic: 1M context beta is enabled iff
-    // CLAUDE_CODE_ENABLE_1M_CONTEXT=1 is in the process env (set via shell
-    // or settings.json's `env` block, both of which land in process env).
-    try {
-      const { stdout } = await execAsync(`ps eww -o command= -p ${pid}`);
-      return /\bCLAUDE_CODE_ENABLE_1M_CONTEXT=1\b/.test(stdout);
-    } catch { return false; }
+    return platform.detectOneMBeta(pid);
   }
 
   async _detectTerminalApp(pid) {
     try {
       let currentPid = pid;
       for (let i = 0; i < 10; i++) {
-        // Get parent pid of current process
         const { stdout: ppidOut } = await execAsync(`ps -o ppid= -p ${currentPid}`);
         const ppid = parseInt(ppidOut.trim());
         if (!ppid || ppid <= 1) break;
 
-        // Get the parent's comm and check for known terminal apps
         const { stdout: commOut } = await execAsync(`ps -o comm= -p ${ppid}`);
         const comm = commOut.trim();
 
-        if (comm.includes('/Terminal.app/')) return 'Terminal';
-        if (comm.includes('/iTerm2.app/') || comm.includes('/iTerm.app/')) return 'iTerm2';
-        if (comm.includes('/Warp.app/')) return 'Warp';
-        if (comm.includes('/Cursor.app/')) return 'Cursor';
-        if (comm.includes('/Visual Studio Code.app/') || comm.includes('/Code.app/')) return 'Visual Studio Code';
-        if (comm.includes('/Alacritty.app/')) return 'Alacritty';
-        if (comm.includes('/kitty.app/')) return 'kitty';
-        if (comm.includes('/Ghostty.app/') || comm.includes('ghostty')) return 'Ghostty';
-        if (comm.includes('/Hyper.app/')) return 'Hyper';
-        if (comm.includes('/Rio.app/')) return 'Rio';
-        if (comm.includes('/WezTerm.app/') || comm.includes('wezterm')) return 'WezTerm';
-        if (comm.includes('/Tabby.app/')) return 'Tabby';
+        const detected = platform.detectTerminalAppFromComm(comm);
+        if (detected) return detected;
 
         currentPid = ppid;
       }
@@ -581,16 +564,8 @@ class ClaudeWatcher extends EventEmitter {
     return inst?._terminalApp || null;
   }
 
-  getCwd(pid) {
-    return new Promise((resolve) => {
-      exec(`lsof -a -p ${pid} -d cwd -Fn 2>/dev/null | grep '^n'`, (err, stdout) => {
-        if (stdout && stdout.trim()) {
-          resolve(stdout.trim().replace(/^n/, ''));
-        } else {
-          resolve(null);
-        }
-      });
-    });
+  async getCwd(pid) {
+    return platform.getCwd(pid);
   }
 
   getSnapshot() {
