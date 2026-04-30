@@ -537,6 +537,24 @@ html, body { background: transparent; overflow: visible; user-select: none; }
   min-width: 0;
 }
 
+.ci-source {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ci-vscode {
+  background: rgba(0, 120, 212, 0.25);
+  color: #569cd6;
+}
+
 /* Status label */
 .ci-label {
   font-family: 'IBM Plex Mono', monospace;

@@ -177,6 +177,18 @@ app.whenReady().then(() => {
     const tty = inst?.tty ? `/dev/${inst.tty}` : '';
     const instCwd = inst?._sessionCwd || inst?.cwd || '';
 
+    // VSCode Claude Code instances have no terminal to focus.
+    // Try to focus the VSCode window by project name instead.
+    if (!tty && inst?.entrypoint === 'claude-vscode') {
+      if (platform.isLinux) {
+        return platform.focusLinux(project);
+      }
+      // macOS: activate VSCode by CFBundleName "Code"
+      return new Promise((resolve) => {
+        execFile('osascript', ['-e', 'tell application "Code" to activate'], () => resolve());
+      });
+    }
+
     // kitty and WezTerm have cross-platform CLIs — handle on both platforms
     if (appName === 'kitty') return focusKittyByCwd(instCwd);
     if (appName === 'WezTerm') return focusWezTermByCwd(instCwd);

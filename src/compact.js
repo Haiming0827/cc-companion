@@ -199,11 +199,14 @@ function render() {
     const selClass = inst.pid === selectedPid ? ' selected' : '';
 
     const displayName = customNames[inst.pid] || inst.project;
+    const sourceTag = inst.entrypoint === 'claude-vscode'
+      ? '<span class="ci-source ci-vscode">VS</span>'
+      : '';
 
     return `<div class="ci-tile ${sc}${selClass}" data-pid="${inst.pid}">
       <div class="ci-top">
         <div class="ci-icon">${active ? WORKING_ICON : SLEEPING_ICON}</div>
-        <div class="ci-project">${displayName}</div>
+        <div class="ci-project">${displayName}${sourceTag}</div>
       </div>
       <div class="ci-bottom">
         <span class="ci-label">${active

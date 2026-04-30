@@ -258,10 +258,14 @@ class ClaudeWatcher extends EventEmitter {
             const rss = parseInt(parts[5]);
             const etime = parts[6];
 
-            if (tty === '??' || tty === '?') continue;
-
             // Skip subagent processes (parent is another Claude instance)
             if (allClaudePids.has(ppid)) continue;
+
+            // No-tty processes without a session file are not Claude instances.
+            // VSCode Claude Code插件有session文件但无tty，需要检测。
+            if (tty === '??' || tty === '?') {
+              if (!this._readSessionFile(pid)) continue;
+            }
 
             seenPids.add(pid);
             const existing = this.instances.get(pid);
@@ -355,7 +359,9 @@ class ClaudeWatcher extends EventEmitter {
     const sessionStats = await this._getSessionStats(sessionInfo?.sessionId, cwd, sessionInfo?.cwd);
 
     // Detect terminal app (async, cached once)
-    const terminalApp = await this._detectTerminalApp(pid);
+    // Skip for no-tty processes (VSCode plugin) — they have no terminal to focus
+    const noTty = !tty || tty === '??' || tty === '?';
+    const terminalApp = noTty ? null : await this._detectTerminalApp(pid);
     // Detect 1M-context beta flag from process env (cached once per pid)
     const oneMBeta = await this._detectOneMBeta(pid);
 
@@ -387,6 +393,7 @@ class ClaudeWatcher extends EventEmitter {
       contextTokens: sessionStats?.contextTokens || 0,
       model: sessionStats?.model || null,
       gitBranch: sessionStats?.gitBranch || null,
+      entrypoint: sessionInfo?.entrypoint || 'cli',
       oneMBeta,
     });
     this.emitIfChanged();
@@ -419,6 +426,7 @@ class ClaudeWatcher extends EventEmitter {
         sessionId: data.sessionId,
         startedAt: data.startedAt,
         cwd: data.cwd,
+        entrypoint: data.entrypoint || 'cli',
       };
     } catch {
       return null;

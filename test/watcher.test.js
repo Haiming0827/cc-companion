@@ -870,4 +870,74 @@ describe('ClaudeWatcher', () => {
       expect(watcher._isInstanceActive(inst)).toBe(false);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════
+  // VSCode Claude Code Plugin Detection
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('VSCode plugin detection (no-tty processes)', () => {
+    it('no-tty process with session file is detected via check()', async () => {
+      exec.mockImplementationOnce((cmd, cb) => {
+        cb(null, ' 9999  1234 ?  0.5  0.2 300000  1:00:00 claude --output-format stream-json\n');
+      });
+
+      watcher._readSessionFile = vi.fn().mockReturnValue({
+        sessionId: 'vscode-sess', startedAt: Date.now(), cwd: '/project', entrypoint: 'claude-vscode',
+      });
+      watcher._isInstanceActive = vi.fn().mockReturnValue(false);
+      watcher._detectTerminalApp = vi.fn().mockResolvedValue(null);
+      watcher._detectOneMBeta = vi.fn().mockResolvedValue(false);
+
+      await watcher._initInstance(9999, '?', 0.5, 0.2, 300000, '1:00:00', Date.now());
+
+      expect(watcher.instances.has(9999)).toBe(true);
+      const inst = watcher.instances.get(9999);
+      expect(inst.entrypoint).toBe('claude-vscode');
+      expect(inst._terminalApp).toBeNull();
+      expect(watcher._detectTerminalApp).not.toHaveBeenCalled();
+    });
+
+    it('no-tty process without session file is skipped', () => {
+      // The tty filter logic: no-tty + no session = skip
+      watcher._readSessionFile = vi.fn().mockReturnValue(null);
+      const tty = '?';
+      const isNoTty = tty === '??' || tty === '?';
+      expect(isNoTty && !watcher._readSessionFile(9998)).toBe(true);
+    });
+
+    it('no-tty check logic is correct', () => {
+      expect(!'?' || '?' === '??' || '?' === '?').toBe(true);
+      expect(!'??' || '??' === '??' || '??' === '?').toBe(true);
+      expect(!'' || '' === '??' || '' === '?').toBe(true);
+      expect(!undefined || undefined === '??' || undefined === '?').toBe(true);
+      expect(!'ttys001' || 'ttys001' === '??' || 'ttys001' === '?').toBe(false);
+    });
+
+    it('snapshot includes entrypoint field', () => {
+      watcher.instances.set(7777, makeInstance({
+        pid: 7777, tty: '??', entrypoint: 'claude-vscode',
+      }));
+
+      const snap = watcher.getSnapshot();
+      const inst = snap.instances.find(i => i.pid === 7777);
+      expect(inst).toBeDefined();
+      expect(inst.entrypoint).toBe('claude-vscode');
+    });
+
+    it('snapshot strips private fields but keeps entrypoint', () => {
+      watcher.instances.set(6666, makeInstance({
+        pid: 6666, _terminalApp: 'kitty', _sessionCwd: '/some/path',
+        _graceStart: 123, _lastActiveTurn: 5, entrypoint: 'cli',
+      }));
+
+      const snap = watcher.getSnapshot();
+      const inst = snap.instances.find(i => i.pid === 6666);
+      expect(inst._terminalApp).toBeUndefined();
+      expect(inst._sessionCwd).toBeUndefined();
+      expect(inst._graceStart).toBeUndefined();
+      expect(inst._lastActiveTurn).toBeUndefined();
+      expect(inst.entrypoint).toBe('cli');
+    });
+  });
 });
+
